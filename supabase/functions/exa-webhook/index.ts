@@ -66,84 +66,58 @@ Deno.serve(async (req) => {
         });
       }
 
-      // DUPLICATE CHECK: Look for existing lead with same LinkedIn URL in same campaign
-      let existingLead = null;
-      if (lead.linkedin_url) {
-        const { data: existing } = await supabase
-          .from('leads')
-          .select('*')
-          .eq('linkedin_url', lead.linkedin_url)
-          .eq('campaign_id', campaignId)
-          .maybeSingle();
-        existingLead = existing;
-      }
-
-      // If no LinkedIn match, try email
-      if (!existingLead && lead.email) {
-        const { data: existing } = await supabase
-          .from('leads')
-          .select('*')
-          .eq('email', lead.email)
-          .eq('campaign_id', campaignId)
-          .maybeSingle();
-        existingLead = existing;
-      }
-
-      if (existingLead) {
-        // UPDATE existing lead with new data (merge - keep existing values if new ones are empty)
-        const merged = {
-          name: lead.name !== 'Unknown' ? lead.name : existingLead.name,
-          title: lead.title || existingLead.title,
-          company: lead.company || existingLead.company,
-          location: lead.location || existingLead.location,
-          email: lead.email || existingLead.email,
-          linkedin_url: lead.linkedin_url || existingLead.linkedin_url,
-          profile_data: {
-            ...existingLead.profile_data,
-            ...lead.profile_data,
-            merged_at: new Date().toISOString(),
-          },
-        };
-
-        const { error: updateError } = await supabase
-          .from('leads')
-          .update(merged)
-          .eq('id', existingLead.id);
-
-        if (updateError) {
-          console.error('Error updating existing lead:', updateError);
+      // ATOMIC UPSERT: Use database-level unique constraint to prevent duplicates
+      // The unique index leads_linkedin_campaign_unique handles race conditions
+      const { data: upsertedLead, error: upsertError } = await supabase
+        .from('leads')
+        .upsert(lead, { 
+          onConflict: 'linkedin_url,campaign_id',
+          ignoreDuplicates: false // Update on conflict
+        })
+        .select()
+        .single();
+      
+      if (upsertError) {
+        // If linkedin conflict fails, try email-based upsert
+        if (upsertError.code === '23505' && lead.email) {
+          console.log('LinkedIn conflict, trying email-based upsert');
+          const { error: emailUpsertError } = await supabase
+            .from('leads')
+            .upsert(lead, { 
+              onConflict: 'email,campaign_id',
+              ignoreDuplicates: true // Just skip if email also exists
+            });
+          
+          if (emailUpsertError) {
+            console.log('Lead already exists (both linkedin and email match), skipping');
+          } else {
+            console.log('Lead upserted via email:', lead.name);
+          }
         } else {
-          console.log('Lead merged with existing:', lead.name, existingLead.id);
+          console.error('Error upserting lead:', upsertError);
         }
       } else {
-        // INSERT new lead
-        const { error: insertError } = await supabase.from('leads').insert(lead);
-        
-        if (insertError) {
-          console.error('Error inserting lead:', insertError);
-        } else {
-          console.log('New lead saved:', lead.name);
+        console.log('Lead upserted:', lead.name, upsertedLead?.id);
 
-          // Update items_received count
-          if (searchRecord) {
-            await supabase
-              .from('webset_searches')
-              .update({ items_received: (searchRecord.items_received || 0) + 1 })
-              .eq('webset_id', data.websetId);
-          }
+        // Update items_received count
+        if (searchRecord) {
+          await supabase
+            .from('webset_searches')
+            .update({ items_received: (searchRecord.items_received || 0) + 1 })
+            .eq('webset_id', data.websetId);
+        }
 
-          // Update campaign lead count
-          if (campaignId) {
-            const { count } = await supabase
-              .from('leads')
-              .select('id', { count: 'exact', head: true })
-              .eq('campaign_id', campaignId);
+        // Update campaign lead count
+        if (campaignId) {
+          const { count } = await supabase
+            .from('leads')
+            .select('id', { count: 'exact', head: true })
+            .eq('campaign_id', campaignId);
 
-            await supabase
-              .from('campaigns')
-              .update({ lead_count: count || 0 })
-              .eq('id', campaignId);
-          }
+          await supabase
+            .from('campaigns')
+            .update({ lead_count: count || 0 })
+            .eq('id', campaignId);
         }
       }
     }
