@@ -67,24 +67,29 @@ async function pollAndSaveLeads(websetId: string, campaignId: string | null, EXA
   const leads = (itemsData.data || []).map((item: any) => {
     const enrichments = item.enrichments || [];
 
-    const getEnrichmentValue = (desc: string) => {
-      const enrichment = enrichments.find((e: any) =>
-        e.description?.toLowerCase().includes(desc.toLowerCase())
-      );
-      return enrichment?.value || '';
+    // Enrichments are returned in the order we requested them:
+    // 0: LinkedIn URL, 1: Job title, 2: Company, 3: Location, 4: Email
+    const getEnrichmentResult = (index: number) => {
+      const enrichment = enrichments[index];
+      if (!enrichment || !enrichment.result) return '';
+      // result is an array, get first element
+      return Array.isArray(enrichment.result) ? enrichment.result[0] || '' : String(enrichment.result);
     };
 
-    const linkedinUrl = getEnrichmentValue('linkedin') || item.url || '';
-    const title = getEnrichmentValue('job title') || getEnrichmentValue('title') || '';
-    const company = getEnrichmentValue('company') || '';
-    const location = getEnrichmentValue('location') || '';
-    const email = getEnrichmentValue('email') || '';
+    const linkedinUrl = getEnrichmentResult(0) || item.url || '';
+    const title = getEnrichmentResult(1) || '';
+    const company = getEnrichmentResult(2) || '';
+    const location = getEnrichmentResult(3) || '';
+    const email = getEnrichmentResult(4) || '';
 
+    // Parse name from item.title (e.g., "John Smith - Marketing Director")
     let name = item.title || '';
     if (!name && linkedinUrl) {
       const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
       name = urlMatch ? urlMatch[1].replace(/-/g, ' ') : '';
     }
+
+    console.log(`Parsed lead: ${name}, title: ${title}, company: ${company}`);
 
     return {
       name: name || 'Unknown',

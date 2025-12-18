@@ -46,6 +46,8 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
         campaignId: campaignId 
       });
 
+      console.log('Search result:', result);
+
       if (result.success) {
         // Async mode - leads are being saved in background
         if (result.status === 'processing' || result.websetId) {
