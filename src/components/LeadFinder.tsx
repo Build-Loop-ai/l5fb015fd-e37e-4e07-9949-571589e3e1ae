@@ -3,13 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   Search, 
-  Building2, 
-  MapPin, 
-  Briefcase,
   Sparkles,
   Loader2,
-  UserPlus,
-  Check
+  UserPlus
 } from 'lucide-react';
 import { searchLeadsWithExa, saveLeads, Lead } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -24,20 +20,14 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [foundLeads, setFoundLeads] = useState<Lead[]>([]);
   const [selectedLeads, setSelectedLeads] = useState<Set<number>>(new Set());
+  const [query, setQuery] = useState('');
   const { toast } = useToast();
-  
-  const [formData, setFormData] = useState({
-    jobTitle: '',
-    company: '',
-    location: '',
-    industry: '',
-  });
 
   const handleSearch = async () => {
-    if (!formData.jobTitle && !formData.company && !formData.location && !formData.industry) {
+    if (!query.trim()) {
       toast({
-        title: 'Please enter search criteria',
-        description: 'Add at least one filter to find leads',
+        title: 'Please enter a search query',
+        description: 'Describe who you want to find, e.g. "VPs of Engineering at SaaS companies in San Francisco"',
         variant: 'destructive',
       });
       return;
@@ -48,16 +38,10 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
     setSelectedLeads(new Set());
 
     try {
-      const result = await searchLeadsWithExa({
-        jobTitle: formData.jobTitle,
-        company: formData.company,
-        location: formData.location,
-        industry: formData.industry,
-      });
+      const result = await searchLeadsWithExa({ query: query.trim() });
 
       if (result.success && result.leads) {
         setFoundLeads(result.leads);
-        // Auto-select all leads
         setSelectedLeads(new Set(result.leads.map((_, i) => i)));
         toast({
           title: 'Search complete!',
@@ -79,6 +63,12 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isSearching) {
+      handleSearch();
     }
   };
 
@@ -114,6 +104,7 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
         onLeadsFound?.(leadsToSave);
         setFoundLeads([]);
         setSelectedLeads(new Set());
+        setQuery('');
       } else {
         toast({
           title: 'Save failed',
@@ -141,72 +132,37 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
         </div>
         <h2 className="text-2xl font-bold text-foreground mb-2">Find Your Ideal Leads</h2>
         <p className="text-muted-foreground">
-          Search LinkedIn profiles with Exa AI, enrich with Apify, and generate personalized outreach
+          Describe who you're looking for in plain English
         </p>
       </div>
 
       <div className="glass rounded-2xl p-6 card-shadow">
-        <div className="grid gap-4 mb-6">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Job Title
-              </label>
-              <div className="relative">
-                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="e.g. VP of Engineering"
-                  value={formData.jobTitle}
-                  onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                  className="pl-10 bg-muted/50 border-muted"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Company
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="e.g. TechCorp"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  className="pl-10 bg-muted/50 border-muted"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Location
-              </label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="e.g. San Francisco, CA"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="pl-10 bg-muted/50 border-muted"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Industry
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="e.g. Technology, SaaS"
-                  value={formData.industry}
-                  onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                  className="pl-10 bg-muted/50 border-muted"
-                />
-              </div>
-            </div>
-          </div>
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            placeholder="e.g. VPs of Engineering at SaaS companies in San Francisco"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="pl-12 pr-4 py-6 text-lg bg-muted/50 border-muted"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2 mt-4 mb-6">
+          <span className="text-xs text-muted-foreground">Try:</span>
+          {[
+            'Marketing directors at fintech startups',
+            'CTOs in healthcare industry NYC',
+            'Sales managers at B2B companies',
+          ].map((suggestion) => (
+            <button
+              key={suggestion}
+              onClick={() => setQuery(suggestion)}
+              className="text-xs px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {suggestion}
+            </button>
+          ))}
         </div>
 
         <Button 
@@ -264,14 +220,6 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
               />
             ))}
           </div>
-        </div>
-      )}
-
-      {foundLeads.length === 0 && !isSearching && (
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Pro tip: Be specific with job titles for better results
-          </p>
         </div>
       )}
     </div>

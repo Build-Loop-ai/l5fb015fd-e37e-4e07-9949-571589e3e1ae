@@ -11,21 +11,18 @@ serve(async (req) => {
   }
 
   try {
-    const { query, jobTitle, company, location, industry } = await req.json();
+    const { query } = await req.json();
     
     const EXA_API_KEY = Deno.env.get('EXA_API_KEY');
     if (!EXA_API_KEY) {
       throw new Error('EXA_API_KEY is not configured');
     }
 
-    // Build search query from filters
-    const searchParts = [];
-    if (jobTitle) searchParts.push(`"${jobTitle}"`);
-    if (company) searchParts.push(`"${company}"`);
-    if (industry) searchParts.push(`${industry}`);
-    if (location) searchParts.push(`${location}`);
-    
-    const searchQuery = query || searchParts.join(' ') || 'professional linkedin profile';
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      throw new Error('Search query is required');
+    }
+
+    const searchQuery = query.trim();
     
     console.log('Searching Exa with query:', searchQuery);
 
@@ -75,11 +72,11 @@ serve(async (req) => {
 
       return {
         name: name || 'Unknown',
-        title: extractedTitle || jobTitle || '',
-        company: company || '',
+        title: extractedTitle || '',
+        company: '',
         linkedin_url: url,
-        location: location || '',
-        industry: industry || '',
+        location: '',
+        industry: '',
         profile_data: {
           text: text.substring(0, 500),
           highlights: result.highlights || [],
