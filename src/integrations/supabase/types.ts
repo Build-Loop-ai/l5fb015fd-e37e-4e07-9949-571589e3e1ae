@@ -157,6 +157,50 @@ export type Database = {
           },
         ]
       }
+      webset_searches: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          id: string
+          items_received: number | null
+          query: string
+          status: string
+          updated_at: string
+          webhook_secret: string | null
+          webset_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          items_received?: number | null
+          query: string
+          status?: string
+          updated_at?: string
+          webhook_secret?: string | null
+          webset_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          items_received?: number | null
+          query?: string
+          status?: string
+          updated_at?: string
+          webhook_secret?: string | null
+          webset_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webset_searches_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
