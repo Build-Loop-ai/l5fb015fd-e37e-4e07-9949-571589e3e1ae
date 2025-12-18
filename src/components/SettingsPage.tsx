@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { GlowDot, AbstractBlob } from '@/components/ui/visual-elements';
+import { supabase } from '@/integrations/supabase/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +17,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+
+const CREDITS_PER_LEAD = 1;
+const MAX_CREDITS = 5000;
 
 interface SettingsSectionProps {
   title: string;
@@ -69,6 +72,37 @@ export function SettingsPage() {
     campaignUpdates: false,
     weeklyReport: true,
   });
+
+  const [usageStats, setUsageStats] = useState({
+    leadsCount: 0,
+    campaignsCount: 0,
+    isLoading: true,
+  });
+
+  useEffect(() => {
+    async function fetchUsageStats() {
+      try {
+        const [leadsResult, campaignsResult] = await Promise.all([
+          supabase.from('leads').select('id', { count: 'exact', head: true }),
+          supabase.from('campaigns').select('id', { count: 'exact', head: true }),
+        ]);
+
+        setUsageStats({
+          leadsCount: leadsResult.count || 0,
+          campaignsCount: campaignsResult.count || 0,
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error('Failed to fetch usage stats:', error);
+        setUsageStats(prev => ({ ...prev, isLoading: false }));
+      }
+    }
+
+    fetchUsageStats();
+  }, []);
+
+  const creditsUsed = usageStats.leadsCount * CREDITS_PER_LEAD;
+  const creditsPercentage = Math.min((creditsUsed / MAX_CREDITS) * 100, 100);
 
   const handleSaveProfile = () => {
     toast({
@@ -251,31 +285,42 @@ export function SettingsPage() {
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-muted-foreground">Credits Used</span>
-                    <span className="text-foreground font-medium">2,450 / 5,000</span>
+                    <span className="text-foreground font-medium">
+                      {usageStats.isLoading ? '...' : `${creditsUsed.toLocaleString()} / ${MAX_CREDITS.toLocaleString()}`}
+                    </span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div 
-                      className="h-full rounded-full"
+                      className="h-full rounded-full transition-all duration-500"
                       style={{ 
-                        width: '49%',
+                        width: `${creditsPercentage}%`,
                         background: 'linear-gradient(90deg, hsl(330 100% 63%), hsl(350 90% 65%), hsl(15 95% 60%))'
                       }} 
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {CREDITS_PER_LEAD} credit per lead found
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 pt-4">
                   <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
-                    <p className="text-2xl font-bold text-foreground">∞</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {usageStats.isLoading ? '...' : usageStats.campaignsCount}
+                    </p>
                     <p className="text-xs text-muted-foreground">Campaigns</p>
                   </div>
                   <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
-                    <p className="text-2xl font-bold text-foreground">5,000</p>
-                    <p className="text-xs text-muted-foreground">Leads/mo</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {usageStats.isLoading ? '...' : usageStats.leadsCount.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Leads Found</p>
                   </div>
                   <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
-                    <p className="text-2xl font-bold text-foreground">24/7</p>
-                    <p className="text-xs text-muted-foreground">Support</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {usageStats.isLoading ? '...' : (MAX_CREDITS - creditsUsed).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Remaining</p>
                   </div>
                 </div>
               </div>

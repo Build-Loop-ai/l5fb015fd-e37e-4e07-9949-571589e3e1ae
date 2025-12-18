@@ -1,5 +1,10 @@
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { GlowDot, PulseOrb, AbstractBlob } from './ui/visual-elements';
+import { GlowDot, AbstractBlob } from './ui/visual-elements';
+import { supabase } from '@/integrations/supabase/client';
+
+const CREDITS_PER_LEAD = 1;
+const MAX_CREDITS = 5000;
 
 interface SidebarProps {
   activeTab: string;
@@ -69,6 +74,29 @@ function NavVisual({ type, active }: { type: string; active: boolean }) {
 }
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+  const [leadsCount, setLeadsCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLeadsCount() {
+      try {
+        const { count } = await supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true });
+        setLeadsCount(count || 0);
+      } catch (error) {
+        console.error('Failed to fetch leads count:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchLeadsCount();
+  }, []);
+
+  const creditsUsed = leadsCount * CREDITS_PER_LEAD;
+  const creditsPercentage = Math.min((creditsUsed / MAX_CREDITS) * 100, 100);
+
   return (
     <aside className="fixed left-0 top-0 h-screen w-72 bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
@@ -123,12 +151,14 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               <p className="text-sm font-semibold text-foreground">Pro Plan</p>
               <span className="text-xs text-primary font-semibold tracking-wide">UPGRADE</span>
             </div>
-            <p className="text-xs text-muted-foreground mb-4">2,450 / 5,000 credits</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              {isLoading ? '...' : `${creditsUsed.toLocaleString()} / ${MAX_CREDITS.toLocaleString()} credits`}
+            </p>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full rounded-full transition-all duration-700"
                 style={{ 
-                  width: '49%',
+                  width: `${creditsPercentage}%`,
                   background: 'linear-gradient(90deg, hsl(330 100% 63%), hsl(350 90% 65%), hsl(15 95% 60%))'
                 }} 
               />
