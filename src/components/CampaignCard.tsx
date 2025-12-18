@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Campaign, updateCampaign, deleteCampaign } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, MoreHorizontal, Mail, MessageSquare, Trash2, Loader2 } from 'lucide-react';
+import { Play, Pause, MoreHorizontal, Mail, MessageSquare, Trash2, Loader2, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -19,10 +19,10 @@ interface CampaignCardProps {
 }
 
 const statusConfig = {
-  draft: { label: 'Draft', variant: 'secondary' as const },
-  active: { label: 'Active', variant: 'success' as const },
-  paused: { label: 'Paused', variant: 'warning' as const },
-  completed: { label: 'Completed', variant: 'default' as const },
+  draft: { label: 'Draft', color: 'bg-muted text-muted-foreground' },
+  active: { label: 'Active', color: 'bg-success/15 text-success border-success/30' },
+  paused: { label: 'Paused', color: 'bg-warning/15 text-warning border-warning/30' },
+  completed: { label: 'Completed', color: 'bg-primary/15 text-primary border-primary/30' },
 };
 
 export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProps) {
@@ -67,25 +67,30 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
     : 0;
 
   return (
-    <div className={cn('glass rounded-xl p-5 card-shadow', className)}>
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="font-semibold text-foreground">{campaign.name}</h3>
+    <div className={cn('glass rounded-2xl p-6 card-shadow hover:card-shadow-hover transition-all duration-300 group', className)}>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-5">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-lg text-foreground truncate">{campaign.name}</h3>
           {campaign.created_at && (
             <p className="text-sm text-muted-foreground mt-1">
-              Created {new Date(campaign.created_at).toLocaleDateString()}
+              Created {new Date(campaign.created_at).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+              })}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={status.variant}>{status.label}</Badge>
+          <Badge className={cn('border', status.color)}>{status.label}</Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={isUpdating}>
+              <Button variant="ghost" size="icon" className="h-9 w-9" disabled={isUpdating}>
                 {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="glass-strong border-border/80">
               {campaign.status !== 'active' && (
                 <DropdownMenuItem onClick={() => handleStatusChange('active')}>
                   <Play className="w-4 h-4 mr-2" />
@@ -101,7 +106,7 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
               <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
                 Mark Complete
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </DropdownMenuItem>
@@ -110,24 +115,28 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
         </div>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="text-center">
-          <div className="flex items-center justify-center text-muted-foreground mb-1">
-            <Mail className="w-4 h-4 mr-1" />
+        <div className="text-center p-3 rounded-xl bg-muted/30 border border-border/30">
+          <div className="flex items-center justify-center text-muted-foreground mb-2">
+            <Mail className="w-4 h-4" />
           </div>
-          <div className="text-lg font-semibold text-foreground">{campaign.sent_count || 0}</div>
-          <div className="text-xs text-muted-foreground">Sent</div>
+          <div className="text-xl font-bold text-foreground">{campaign.sent_count || 0}</div>
+          <div className="text-xs text-muted-foreground font-medium">Sent</div>
         </div>
-        <div className="text-center">
-          <div className="flex items-center justify-center text-muted-foreground mb-1">
-            <MessageSquare className="w-4 h-4 mr-1" />
+        <div className="text-center p-3 rounded-xl bg-muted/30 border border-border/30">
+          <div className="flex items-center justify-center text-muted-foreground mb-2">
+            <MessageSquare className="w-4 h-4" />
           </div>
-          <div className="text-lg font-semibold text-foreground">{campaign.reply_count || 0}</div>
-          <div className="text-xs text-muted-foreground">Replies</div>
+          <div className="text-xl font-bold text-foreground">{campaign.reply_count || 0}</div>
+          <div className="text-xs text-muted-foreground font-medium">Replies</div>
         </div>
-        <div className="text-center">
-          <div className="text-lg font-semibold text-foreground">{replyRate}%</div>
-          <div className="text-xs text-muted-foreground">Reply Rate</div>
+        <div className="text-center p-3 rounded-xl bg-muted/30 border border-border/30">
+          <div className="flex items-center justify-center text-muted-foreground mb-2">
+            <TrendingUp className="w-4 h-4" />
+          </div>
+          <div className="text-xl font-bold text-foreground">{replyRate}%</div>
+          <div className="text-xs text-muted-foreground font-medium">Rate</div>
         </div>
       </div>
     </div>

@@ -26,7 +26,11 @@ import {
   Plus,
   Download,
   RefreshCw,
-  Loader2
+  Loader2,
+  Sparkles,
+  ArrowRight,
+  Target,
+  Zap
 } from 'lucide-react';
 
 export default function Index() {
@@ -71,7 +75,6 @@ export default function Index() {
     loadData();
   }, []);
 
-  // Convert API leads to legacy format for the table
   const convertedLeads: LegacyLead[] = dbLeads.map((lead) => ({
     id: lead.id || '',
     name: lead.name,
@@ -128,7 +131,12 @@ export default function Index() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+          <p className="text-muted-foreground font-medium">Loading your workspace...</p>
+        </div>
       </div>
     );
   }
@@ -137,23 +145,24 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       
-      <main className="ml-64 p-8">
+      <main className="ml-72 p-10">
         {activeTab === 'dashboard' && (
           <div className="animate-fade-in">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-              <p className="text-muted-foreground">Track your outreach performance and lead pipeline</p>
+            {/* Page Header */}
+            <div className="page-header">
+              <h1 className="page-title">Dashboard</h1>
+              <p className="page-subtitle">Track your outreach performance and lead pipeline</p>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
               <StatCard
                 title="Total Leads"
                 value={stats.totalLeads}
                 change={stats.totalLeads > 0 ? 'In database' : 'Start finding leads'}
                 changeType="positive"
                 icon={Users}
-                className="stagger-1"
+                className="animate-fade-in stagger-1"
               />
               <StatCard
                 title="Contacted"
@@ -161,7 +170,7 @@ export default function Index() {
                 change={stats.contacted > 0 ? 'Outreach sent' : 'Ready to contact'}
                 changeType="positive"
                 icon={Send}
-                className="stagger-2"
+                className="animate-fade-in stagger-2"
               />
               <StatCard
                 title="Replied"
@@ -169,7 +178,7 @@ export default function Index() {
                 change={stats.replied > 0 ? 'Got responses' : 'Awaiting replies'}
                 changeType="positive"
                 icon={MessageSquare}
-                className="stagger-3"
+                className="animate-fade-in stagger-3"
               />
               <StatCard
                 title="Reply Rate"
@@ -177,51 +186,64 @@ export default function Index() {
                 change={replyRate > 20 ? 'Above average' : 'Keep going'}
                 changeType={replyRate > 20 ? 'positive' : 'neutral'}
                 icon={TrendingUp}
-                className="stagger-4"
+                className="animate-fade-in stagger-4"
               />
             </div>
 
             {/* Quick Actions */}
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button
-                  variant="outline"
-                  className="h-auto py-6 flex flex-col items-center gap-2"
+            <div className="mb-10">
+              <div className="section-header">
+                <h2 className="section-title">Quick Actions</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <button
                   onClick={() => setActiveTab('finder')}
+                  className="action-card text-left relative"
                 >
-                  <Users className="w-8 h-8 text-primary" />
-                  <span className="font-medium">Find New Leads</span>
-                  <span className="text-xs text-muted-foreground">Search with Exa AI</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-6 flex flex-col items-center gap-2"
+                  <div className="relative z-10">
+                    <div className="icon-badge mb-4">
+                      <Sparkles className="w-7 h-7 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-foreground text-lg mb-1">Find New Leads</h3>
+                    <p className="text-muted-foreground text-sm">AI-powered lead discovery</p>
+                  </div>
+                  <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+                <button
                   onClick={() => setActiveTab('leads')}
+                  className="action-card text-left relative"
                 >
-                  <Send className="w-8 h-8 text-primary" />
-                  <span className="font-medium">View Leads</span>
-                  <span className="text-xs text-muted-foreground">{dbLeads.length} in database</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-6 flex flex-col items-center gap-2"
+                  <div className="relative z-10">
+                    <div className="icon-badge mb-4">
+                      <Target className="w-7 h-7 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-foreground text-lg mb-1">View Leads</h3>
+                    <p className="text-muted-foreground text-sm">{dbLeads.length} in your database</p>
+                  </div>
+                </button>
+                <button
                   onClick={() => setActiveTab('campaigns')}
+                  className="action-card text-left relative"
                 >
-                  <TrendingUp className="w-8 h-8 text-primary" />
-                  <span className="font-medium">Manage Campaigns</span>
-                  <span className="text-xs text-muted-foreground">{campaigns.length} campaigns</span>
-                </Button>
+                  <div className="relative z-10">
+                    <div className="icon-badge mb-4">
+                      <Zap className="w-7 h-7 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-foreground text-lg mb-1">Manage Campaigns</h3>
+                    <p className="text-muted-foreground text-sm">{campaigns.length} active campaigns</p>
+                  </div>
+                </button>
               </div>
             </div>
 
             {/* Recent Leads */}
             {convertedLeads.length > 0 && (
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-foreground">Recent Leads</h2>
-                  <Button variant="outline" size="sm" onClick={() => setActiveTab('leads')}>
+              <div className="mb-10 animate-fade-in stagger-5">
+                <div className="section-header">
+                  <h2 className="section-title">Recent Leads</h2>
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('leads')} className="rounded-lg">
                     View All
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
                 <LeadTable 
@@ -233,14 +255,15 @@ export default function Index() {
 
             {/* Active Campaigns */}
             {campaigns.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-foreground">Campaigns</h2>
-                  <Button variant="outline" size="sm" onClick={() => setActiveTab('campaigns')}>
+              <div className="animate-fade-in stagger-6">
+                <div className="section-header">
+                  <h2 className="section-title">Campaigns</h2>
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('campaigns')} className="rounded-lg">
                     View All
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {campaigns.slice(0, 4).map((campaign, index) => (
                     <CampaignCard 
                       key={campaign.id} 
@@ -253,14 +276,19 @@ export default function Index() {
               </div>
             )}
 
+            {/* Empty State */}
             {convertedLeads.length === 0 && campaigns.length === 0 && (
-              <div className="glass rounded-xl p-12 text-center">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Get started</h3>
-                <p className="text-muted-foreground mb-4">Find your first leads using AI-powered search</p>
-                <Button onClick={() => setActiveTab('finder')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Find Leads
+              <div className="empty-state animate-fade-in-up">
+                <div className="icon-badge mx-auto mb-6 w-20 h-20 rounded-3xl">
+                  <Users className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-2xl font-semibold text-foreground mb-3">Welcome to LeadPulse</h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Start by finding your first leads using AI-powered search. Describe your ideal customer and we'll find them for you.
+                </p>
+                <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl">
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Find Your First Leads
                 </Button>
               </div>
             )}
@@ -269,21 +297,21 @@ export default function Index() {
 
         {activeTab === 'leads' && (
           <div className="animate-fade-in">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground mb-2">Leads</h1>
-                <p className="text-muted-foreground">{dbLeads.length} leads in your database</p>
+            <div className="flex items-center justify-between mb-10">
+              <div className="page-header mb-0">
+                <h1 className="page-title">Leads</h1>
+                <p className="page-subtitle">{dbLeads.length} leads in your database</p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={loadData}>
+                <Button variant="outline" onClick={loadData} className="rounded-lg">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" className="rounded-lg">
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
-                <Button onClick={() => setActiveTab('finder')}>
+                <Button onClick={() => setActiveTab('finder')} className="rounded-lg">
                   <Plus className="w-4 h-4 mr-2" />
                   Find Leads
                 </Button>
@@ -297,12 +325,14 @@ export default function Index() {
                 onDelete={handleDeleteLead}
               />
             ) : (
-              <div className="glass rounded-xl p-12 text-center">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">No leads yet</h3>
-                <p className="text-muted-foreground mb-4">Start by finding leads with our AI-powered search</p>
-                <Button onClick={() => setActiveTab('finder')}>
-                  <Plus className="w-4 h-4 mr-2" />
+              <div className="empty-state">
+                <div className="icon-badge mx-auto mb-6 w-20 h-20 rounded-3xl">
+                  <Users className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-2xl font-semibold text-foreground mb-3">No leads yet</h3>
+                <p className="text-muted-foreground mb-6">Start by finding leads with our AI-powered search</p>
+                <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl">
+                  <Sparkles className="w-5 h-5 mr-2" />
                   Find Leads
                 </Button>
               </div>
@@ -311,25 +341,25 @@ export default function Index() {
         )}
 
         {activeTab === 'finder' && (
-          <div className="animate-fade-in py-8">
+          <div className="animate-fade-in py-6">
             <LeadFinder onLeadsFound={handleLeadsFound} />
           </div>
         )}
 
         {activeTab === 'campaigns' && (
           <div className="animate-fade-in">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground mb-2">Campaigns</h1>
-                <p className="text-muted-foreground">{campaigns.length} campaigns</p>
+            <div className="flex items-center justify-between mb-10">
+              <div className="page-header mb-0">
+                <h1 className="page-title">Campaigns</h1>
+                <p className="page-subtitle">{campaigns.length} campaigns</p>
               </div>
-              <Button onClick={() => setShowCreateCampaign(true)}>
+              <Button onClick={() => setShowCreateCampaign(true)} className="rounded-lg">
                 <Plus className="w-4 h-4 mr-2" />
                 New Campaign
               </Button>
             </div>
             {campaigns.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {campaigns.map((campaign, index) => (
                   <CampaignCard 
                     key={campaign.id} 
@@ -340,13 +370,15 @@ export default function Index() {
                 ))}
               </div>
             ) : (
-              <div className="glass rounded-xl p-12 text-center">
-                <Send className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">No campaigns yet</h3>
-                <p className="text-muted-foreground mb-4">Create your first outreach campaign</p>
-                <Button onClick={() => setShowCreateCampaign(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Campaign
+              <div className="empty-state">
+                <div className="icon-badge mx-auto mb-6 w-20 h-20 rounded-3xl">
+                  <Send className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-2xl font-semibold text-foreground mb-3">No campaigns yet</h3>
+                <p className="text-muted-foreground mb-6">Create your first outreach campaign</p>
+                <Button onClick={() => setShowCreateCampaign(true)} size="lg" className="rounded-xl">
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create Campaign
                 </Button>
               </div>
             )}
@@ -355,11 +387,11 @@ export default function Index() {
 
         {activeTab === 'settings' && (
           <div className="animate-fade-in">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Settings</h1>
-              <p className="text-muted-foreground">Configure your account and preferences</p>
+            <div className="page-header">
+              <h1 className="page-title">Settings</h1>
+              <p className="page-subtitle">Configure your account and preferences</p>
             </div>
-            <div className="glass rounded-xl p-6 max-w-2xl">
+            <div className="glass-strong rounded-2xl p-8 max-w-2xl card-shadow">
               <h3 className="text-lg font-semibold text-foreground mb-4">Account Settings</h3>
               <p className="text-muted-foreground">Settings panel coming soon...</p>
             </div>
