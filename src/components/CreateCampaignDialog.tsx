@@ -100,7 +100,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
       const campaignResult = await createCampaign({
         name: name.trim(),
         goal: goal.trim(),
-        status: 'processing',
+        status: 'draft',
         search_query: searchQuery.trim(),
         sent_count: 0,
         reply_count: 0,
