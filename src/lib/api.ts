@@ -174,6 +174,138 @@ export async function deleteLead(leadId: string): Promise<{ success: boolean; er
   return { success: true };
 }
 
+export interface LinkedInProfile {
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  headline: string;
+  summary: string;
+  email: string | null;
+  mobileNumber: string | null;
+  jobTitle: string;
+  companyName: string;
+  companyIndustry: string;
+  companySize: string;
+  companyWebsite: string;
+  companyLinkedin: string;
+  jobLocation: string;
+  jobStartedOn: string;
+  currentJobDuration: string;
+  connections: number;
+  followers: number;
+  experiences: Array<{
+    title: string;
+    companyName: string;
+    description: string;
+    location: string;
+    startDate: string;
+    endDate: string | null;
+    stillWorking: boolean;
+    duration: string;
+    companyIndustry: string;
+    companySize: string;
+  }>;
+  educations: Array<{
+    schoolName: string;
+    degree: string;
+    fieldOfStudy: string;
+    startYear: string;
+    endYear: string;
+    description: string;
+  }>;
+  skills: Array<{ title: string }>;
+  languages: Array<{ name: string; proficiency: string }>;
+  certifications: Array<{ name: string; authority: string; issueDate: string }>;
+  linkedinUrl: string;
+  publicIdentifier: string;
+  profilePicture: string;
+}
+
+export async function enrichLeadWithLinkedIn(
+  leadId: string,
+  linkedinUrl: string
+): Promise<{ success: boolean; profile?: LinkedInProfile; error?: string }> {
+  console.log('Enriching lead with LinkedIn:', leadId, linkedinUrl);
+
+  // Call the apify-scrape edge function
+  const { data, error } = await supabase.functions.invoke('apify-scrape', {
+    body: { linkedinUrl },
+  });
+
+  if (error) {
+    console.error('LinkedIn enrichment error:', error);
+    return { success: false, error: error.message };
+  }
+
+  if (!data?.success || !data?.profile) {
+    console.error('LinkedIn enrichment failed:', data?.error);
+    return { success: false, error: data?.error || 'Failed to fetch LinkedIn profile' };
+  }
+
+  const profile: LinkedInProfile = data.profile;
+
+  // Get current lead data to merge profile_data
+  const { data: currentLead } = await supabase
+    .from('leads')
+    .select('profile_data')
+    .eq('id', leadId)
+    .single();
+
+  // Merge LinkedIn data into profile_data
+  const existingProfileData = (currentLead?.profile_data && typeof currentLead.profile_data === 'object') 
+    ? currentLead.profile_data 
+    : {};
+  const updatedProfileData = {
+    ...existingProfileData,
+    linkedin: profile,
+    linkedin_enriched_at: new Date().toISOString(),
+  };
+
+  // Update lead with enriched data
+  const updates: Record<string, any> = {
+    profile_data: updatedProfileData,
+  };
+
+  // Fill in missing basic fields from LinkedIn data
+  const { data: leadData } = await supabase
+    .from('leads')
+    .select('email, phone, title, company, industry, location')
+    .eq('id', leadId)
+    .single();
+
+  if (!leadData?.email && profile.email) {
+    updates.email = profile.email;
+  }
+  if (!leadData?.phone && profile.mobileNumber) {
+    updates.phone = profile.mobileNumber;
+  }
+  if (!leadData?.title && profile.jobTitle) {
+    updates.title = profile.jobTitle;
+  }
+  if (!leadData?.company && profile.companyName) {
+    updates.company = profile.companyName;
+  }
+  if (!leadData?.industry && profile.companyIndustry) {
+    updates.industry = profile.companyIndustry;
+  }
+  if (!leadData?.location && profile.jobLocation) {
+    updates.location = profile.jobLocation;
+  }
+
+  const { error: updateError } = await supabase
+    .from('leads')
+    .update(updates)
+    .eq('id', leadId);
+
+  if (updateError) {
+    console.error('Failed to update lead with LinkedIn data:', updateError);
+    return { success: false, error: updateError.message };
+  }
+
+  console.log('Lead enriched successfully with LinkedIn data');
+  return { success: true, profile };
+}
+
 // Campaign functions
 export async function getCampaigns(): Promise<{ success: boolean; campaigns?: Campaign[]; error?: string }> {
   const { data, error } = await supabase
