@@ -166,6 +166,13 @@ function parseLeadFromItem(item: any): any {
     name = urlMatch ? urlMatch[1].replace(/-/g, ' ') : '';
   }
 
+  // Clean up name - remove trailing numbers/IDs (e.g., "john smith 12345678" -> "john smith")
+  name = name.replace(/\s+[a-f0-9]{6,}$/i, '').trim();
+  // Also remove patterns like "name-12345" from URL slugs
+  name = name.replace(/-[a-f0-9]{6,}$/i, '').replace(/-/g, ' ').trim();
+  // Capitalize first letter of each word
+  name = name.split(' ').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+
   console.log(`Parsed: name=${name}, title=${title}, company=${company}, location=${location}`);
 
   return {
