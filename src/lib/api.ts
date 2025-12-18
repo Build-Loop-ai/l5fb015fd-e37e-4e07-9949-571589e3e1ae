@@ -12,6 +12,7 @@ export interface Lead {
   industry?: string;
   profile_data?: any;
   status?: string;
+  campaign_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -19,6 +20,7 @@ export interface Lead {
 export interface Campaign {
   id?: string;
   name: string;
+  goal?: string;
   status?: string;
   sent_count?: number;
   reply_count?: number;
@@ -62,26 +64,9 @@ export async function searchLeadsWithExa(params: {
   return data;
 }
 
-export async function scrapeLinkedInProfile(linkedinUrl: string): Promise<{
-  success: boolean;
-  profile?: any;
-  error?: string;
-}> {
-  const { data, error } = await supabase.functions.invoke('apify-scrape', {
-    body: { linkedinUrl },
-  });
-
-  if (error) {
-    console.error('Apify scrape error:', error);
-    return { success: false, error: error.message };
-  }
-
-  return data;
-}
-
 export async function generateOutreach(params: {
   lead: Lead;
-  template?: string;
+  campaignGoal?: string;
   tone?: 'professional' | 'casual' | 'friendly' | 'formal';
 }): Promise<{ success: boolean; outreach?: GeneratedOutreach; error?: string }> {
   const { data, error } = await supabase.functions.invoke('generate-outreach', {
@@ -202,6 +187,21 @@ export async function getCampaigns(): Promise<{ success: boolean; campaigns?: Ca
   }
 
   return { success: true, campaigns: data };
+}
+
+export async function getCampaignById(campaignId: string): Promise<{ success: boolean; campaign?: Campaign; error?: string }> {
+  const { data, error } = await supabase
+    .from('campaigns')
+    .select('*')
+    .eq('id', campaignId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Get campaign error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, campaign: data || undefined };
 }
 
 export async function createCampaign(campaign: Omit<Campaign, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; campaign?: Campaign; error?: string }> {

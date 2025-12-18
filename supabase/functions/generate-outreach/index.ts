@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { lead, template, tone } = await req.json();
+    const { lead, campaignGoal, tone } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -23,34 +23,62 @@ serve(async (req) => {
     }
 
     console.log('Generating outreach for:', lead.name);
+    console.log('Campaign goal:', campaignGoal);
 
-    const systemPrompt = `You are an expert sales copywriter who writes personalized, high-converting cold outreach messages. Your messages are:
-- Personalized based on the recipient's background
-- Concise and respectful of their time
-- Value-focused rather than sales-y
-- Professional but warm
-- Include a clear but soft call-to-action
+    // Extract rich context from Exa enrichment data
+    const enrichments = lead.profile_data?.enrichments || [];
+    const enrichmentSnippets = enrichments
+      .map((e: any) => e.references?.[0]?.snippet)
+      .filter(Boolean)
+      .join('\n\n');
 
-Write in a ${tone || 'professional'} tone.`;
+    // Get any additional context from profile_data
+    const profileSummary = lead.profile_data?.summary || '';
+    const profileHeadline = lead.profile_data?.headline || '';
 
-    const userPrompt = `Write a personalized cold outreach email for this lead:
+    console.log('Enrichment snippets length:', enrichmentSnippets.length);
 
+    const systemPrompt = `You are an elite cold email copywriter. Your messages get 40%+ open rates and 15%+ reply rates. You write like a human, not a marketer.
+
+Your style:
+- Short, punchy sentences. Never more than 2 lines per paragraph
+- No generic phrases like "I hope this finds you well" or "I came across your profile"
+- Pattern interrupt opening lines that make them curious
+- Reference SPECIFIC details from their background - be precise
+- Connect their experience to value, don't sell features
+- Soft CTAs that are easy to say yes to
+- Write like you're texting a colleague, not writing a formal letter
+- Use their first name naturally, not repeatedly
+
+Tone: ${tone || 'professional but human'}
+
+CRITICAL: The outreach must feel 1:1 personalized, not templated. Reference actual things from their profile.`;
+
+    const userPrompt = `Write a high-converting cold outreach for this lead:
+
+**LEAD PROFILE:**
 Name: ${lead.name}
 Title: ${lead.title || 'Professional'}
 Company: ${lead.company || 'their company'}
-Location: ${lead.location || ''}
+Location: ${lead.location || 'Unknown'}
 Industry: ${lead.industry || ''}
 
-${lead.profile_data?.summary ? `About them: ${lead.profile_data.summary}` : ''}
-${lead.profile_data?.headline ? `Headline: ${lead.profile_data.headline}` : ''}
-${lead.profile_data?.currentCompany ? `Current company: ${lead.profile_data.currentCompany}` : ''}
+**BACKGROUND (from their LinkedIn - USE THIS for personalization):**
+${enrichmentSnippets || profileSummary || profileHeadline || 'No additional background available'}
 
-${template ? `Use this as inspiration for the message theme: ${template}` : 'Write about how we can help them grow their business.'}
+**CAMPAIGN GOAL:**
+${campaignGoal || 'Connect and explore potential collaboration'}
 
-Return a JSON object with:
-- subject: A compelling email subject line (max 60 chars)
-- body: The email body (use {{first_name}} as placeholder)
-- linkedin_message: A shorter version for LinkedIn DM (max 300 chars)`;
+Write outreach that:
+1. Opens with something specific about THEM (not us)
+2. Connects their experience/role to our value proposition
+3. Has a low-friction CTA aligned with the campaign goal
+4. Feels like it was written specifically for them
+
+Return JSON with:
+- subject: Compelling, curiosity-driven subject line (max 50 chars, no clickbait)
+- body: Email body - short paragraphs, specific personalization, clear value
+- linkedin_message: Shorter LinkedIn version (max 280 chars) - direct, personal, ends with soft question`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -74,7 +102,7 @@ Return a JSON object with:
                 type: 'object',
                 properties: {
                   subject: { type: 'string', description: 'Email subject line' },
-                  body: { type: 'string', description: 'Email body with {{first_name}} placeholder' },
+                  body: { type: 'string', description: 'Email body' },
                   linkedin_message: { type: 'string', description: 'Short LinkedIn message' },
                 },
                 required: ['subject', 'body', 'linkedin_message'],
@@ -117,10 +145,7 @@ Return a JSON object with:
 
     const outreach = JSON.parse(toolCall.function.arguments);
     
-    // Replace placeholder with actual first name
-    const firstName = lead.name.split(' ')[0];
-    outreach.body = outreach.body.replace(/\{\{first_name\}\}/g, firstName);
-    outreach.linkedin_message = outreach.linkedin_message.replace(/\{\{first_name\}\}/g, firstName);
+    console.log('Generated outreach subject:', outreach.subject);
 
     return new Response(
       JSON.stringify({ success: true, outreach }),

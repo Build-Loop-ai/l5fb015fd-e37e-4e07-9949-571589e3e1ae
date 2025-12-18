@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RingLoader } from '@/components/ui/visual-elements';
-import { Lead, scrapeLinkedInProfile, generateOutreach, GeneratedOutreach } from '@/lib/api';
+import { Lead, generateOutreach, GeneratedOutreach } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -16,63 +16,23 @@ interface LeadResultCardProps {
   lead: Lead;
   isSelected: boolean;
   onToggleSelect: () => void;
+  campaignGoal?: string;
 }
 
-export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultCardProps) {
-  const [isEnriching, setIsEnriching] = useState(false);
+export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal }: LeadResultCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [enrichedData, setEnrichedData] = useState<any>(null);
   const [outreach, setOutreach] = useState<GeneratedOutreach | null>(null);
   const [showOutreachDialog, setShowOutreachDialog] = useState(false);
   const { toast } = useToast();
 
-  const handleEnrich = async () => {
-    if (!lead.linkedin_url) {
-      toast({
-        title: 'No LinkedIn URL',
-        description: 'Cannot enrich without a LinkedIn profile URL',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsEnriching(true);
-    try {
-      const result = await scrapeLinkedInProfile(lead.linkedin_url);
-      if (result.success && result.profile) {
-        setEnrichedData(result.profile);
-        toast({
-          title: 'Profile enriched!',
-          description: `Loaded additional data for ${lead.name}`,
-        });
-      } else {
-        toast({
-          title: 'Enrichment failed',
-          description: result.error || 'Could not fetch profile data',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Enrich error:', error);
-      toast({
-        title: 'Enrichment error',
-        description: 'Failed to enrich lead. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsEnriching(false);
-    }
-  };
-
   const handleGenerateOutreach = async () => {
     setIsGenerating(true);
     try {
-      const leadWithEnriched = {
-        ...lead,
-        profile_data: enrichedData ? { ...lead.profile_data, ...enrichedData } : lead.profile_data,
-      };
-
-      const result = await generateOutreach({ lead: leadWithEnriched });
+      const result = await generateOutreach({ 
+        lead, 
+        campaignGoal: campaignGoal || undefined 
+      });
+      
       if (result.success && result.outreach) {
         setOutreach(result.outreach);
         setShowOutreachDialog(true);
@@ -106,6 +66,10 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
       description: `${label} copied to clipboard`,
     });
   };
+
+  // Extract enrichment snippets for preview
+  const enrichments = lead.profile_data?.enrichments || [];
+  const firstSnippet = enrichments[0]?.references?.[0]?.snippet;
 
   return (
     <>
@@ -172,45 +136,17 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
               </div>
             </div>
 
-            {/* Enriched Data */}
-            {enrichedData && (
-              <div className="mt-5 p-5 rounded-xl bg-muted/30 border border-border/50">
-                {enrichedData.headline && (
-                  <p className="text-foreground font-medium">{enrichedData.headline}</p>
-                )}
-                {enrichedData.summary && (
-                  <p className="text-muted-foreground mt-2 text-sm line-clamp-2">
-                    {enrichedData.summary}
-                  </p>
-                )}
-                {enrichedData.currentCompany && (
-                  <p className="text-muted-foreground mt-2 text-sm">
-                    <span className="text-foreground font-medium">Currently at:</span> {enrichedData.currentCompany}
-                  </p>
-                )}
+            {/* Enrichment Preview */}
+            {firstSnippet && (
+              <div className="mt-4 p-4 rounded-xl bg-muted/30 border border-border/50">
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {firstSnippet}
+                </p>
               </div>
             )}
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3 mt-5">
-              {lead.linkedin_url && !enrichedData && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleEnrich}
-                  disabled={isEnriching}
-                  className="rounded-xl"
-                >
-                  {isEnriching ? (
-                    <span className="flex items-center gap-2">
-                      <RingLoader className="w-3 h-3" />
-                      Enriching...
-                    </span>
-                  ) : (
-                    'Enrich Profile'
-                  )}
-                </Button>
-              )}
               <Button
                 variant="default"
                 size="sm"

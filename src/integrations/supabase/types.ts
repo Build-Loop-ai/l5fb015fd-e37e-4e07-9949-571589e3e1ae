@@ -17,6 +17,7 @@ export type Database = {
       campaigns: {
         Row: {
           created_at: string
+          goal: string | null
           id: string
           lead_count: number | null
           name: string
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          goal?: string | null
           id?: string
           lead_count?: number | null
           name: string
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          goal?: string | null
           id?: string
           lead_count?: number | null
           name?: string
