@@ -5,22 +5,23 @@ export interface Lead {
   company: string;
   title: string;
   industry: string;
-  location: string;
-  linkedIn?: string;
+  location?: string;
+  linkedin?: string;
   phone?: string;
-  status: 'new' | 'contacted' | 'responded' | 'qualified' | 'lost';
-  lastContacted?: string;
+  status: 'new' | 'contacted' | 'responded' | 'qualified' | 'replied' | 'unqualified' | 'lost';
+  lastContact?: string | null;
   score: number;
   createdAt: string;
+  tags?: string[];
+  notes?: string;
 }
 
 export interface Campaign {
-  id: string;
+  id?: string;
   name: string;
-  status: 'draft' | 'active' | 'paused' | 'completed';
-  leadsCount: number;
-  sentCount: number;
-  openRate: number;
-  replyRate: number;
-  createdAt: string;
+  status?: 'draft' | 'active' | 'paused' | 'completed';
+  sent_count?: number;
+  reply_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }

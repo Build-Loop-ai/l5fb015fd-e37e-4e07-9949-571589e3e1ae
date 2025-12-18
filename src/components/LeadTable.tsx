@@ -10,26 +10,38 @@ import {
   Mail, 
   Linkedin,
   Phone,
-  ArrowUpDown
+  ArrowUpDown,
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface LeadTableProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
+  onStatusChange?: (leadId: string, status: string) => void;
+  onDelete?: (leadId: string) => void;
 }
 
-const statusVariants: Record<Lead['status'], 'new' | 'contacted' | 'responded' | 'qualified' | 'lost'> = {
+const statusVariants: Record<string, string> = {
   new: 'new',
   contacted: 'contacted',
   responded: 'responded',
   qualified: 'qualified',
+  replied: 'replied',
+  unqualified: 'unqualified',
   lost: 'lost',
 };
 
-export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
+export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: LeadTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortField, setSortField] = useState<keyof Lead>('score');
+  const [sortField, setSortField] = useState<keyof Lead>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const filteredLeads = leads
@@ -45,8 +57,8 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
         return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
       }
       return sortDirection === 'asc' 
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
+        ? String(aVal || '').localeCompare(String(bVal || ''))
+        : String(bVal || '').localeCompare(String(aVal || ''));
     });
 
   const handleSort = (field: keyof Lead) => {
@@ -95,10 +107,10 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
               <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
               <th className="text-left p-4 text-sm font-medium text-muted-foreground">
                 <button 
-                  onClick={() => handleSort('score')}
+                  onClick={() => handleSort('createdAt')}
                   className="flex items-center gap-1 hover:text-foreground transition-colors"
                 >
-                  Score
+                  Added
                   <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
@@ -107,73 +119,128 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filteredLeads.map((lead, index) => (
-              <tr 
-                key={lead.id} 
-                className={cn(
-                  'lead-row border-b border-border/50',
-                  'animate-fade-in opacity-0'
-                )}
-                style={{ animationDelay: `${index * 0.05}s` }}
-                onClick={() => onLeadClick(lead)}
-              >
-                <td className="p-4">
-                  <div>
-                    <p className="font-medium text-foreground">{lead.name}</p>
-                    <p className="text-sm text-muted-foreground">{lead.title}</p>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div>
-                    <p className="text-foreground">{lead.company}</p>
-                    <p className="text-sm text-muted-foreground">{lead.industry}</p>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <Badge variant={statusVariants[lead.status]}>
-                    {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                  </Badge>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-12 h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className={cn(
-                          'h-full rounded-full transition-all',
-                          lead.score >= 90 ? 'bg-success' :
-                          lead.score >= 75 ? 'bg-primary' :
-                          lead.score >= 50 ? 'bg-warning' : 'bg-destructive'
-                        )}
-                        style={{ width: `${lead.score}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{lead.score}</span>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Mail className="w-4 h-4" />
-                    </Button>
-                    {lead.linkedIn && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Linkedin className="w-4 h-4" />
-                      </Button>
-                    )}
-                    {lead.phone && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Phone className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </td>
-                <td className="p-4 text-right">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
+            {filteredLeads.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                  No leads found
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredLeads.map((lead, index) => (
+                <tr 
+                  key={lead.id} 
+                  className={cn(
+                    'lead-row border-b border-border/50 cursor-pointer',
+                    'animate-fade-in opacity-0'
+                  )}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                  onClick={() => onLeadClick(lead)}
+                >
+                  <td className="p-4">
+                    <div>
+                      <p className="font-medium text-foreground">{lead.name}</p>
+                      <p className="text-sm text-muted-foreground">{lead.title}</p>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div>
+                      <p className="text-foreground">{lead.company || '-'}</p>
+                      <p className="text-sm text-muted-foreground">{lead.industry || ''}</p>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <Badge variant={statusVariants[lead.status] as any || 'new'}>
+                      {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                    </Badge>
+                  </td>
+                  <td className="p-4 text-muted-foreground">
+                    {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : '-'}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      {lead.email && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `mailto:${lead.email}`;
+                        }}>
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {lead.linkedin && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(lead.linkedin, '_blank');
+                        }}>
+                          <Linkedin className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {lead.phone && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `tel:${lead.phone}`;
+                        }}>
+                          <Phone className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {lead.linkedin && (
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(lead.linkedin, '_blank');
+                          }}>
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            View LinkedIn
+                          </DropdownMenuItem>
+                        )}
+                        {onStatusChange && (
+                          <>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              onStatusChange(lead.id, 'contacted');
+                            }}>
+                              Mark Contacted
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              onStatusChange(lead.id, 'replied');
+                            }}>
+                              Mark Replied
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              onStatusChange(lead.id, 'qualified');
+                            }}>
+                              Mark Qualified
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {onDelete && (
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(lead.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -183,10 +250,6 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
         <p className="text-sm text-muted-foreground">
           Showing {filteredLeads.length} of {leads.length} leads
         </p>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>Previous</Button>
-          <Button variant="outline" size="sm">Next</Button>
-        </div>
       </div>
     </div>
   );
