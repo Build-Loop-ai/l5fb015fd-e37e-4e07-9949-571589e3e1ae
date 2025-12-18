@@ -1,18 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { createCampaign, searchLeadsWithExa } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { RingLoader, AbstractBlob } from '@/components/ui/visual-elements';
 import { cn } from '@/lib/utils';
+import { ArrowRight, ArrowLeft, Sparkles, Target, Search, Check } from 'lucide-react';
 
 interface CreateCampaignDialogProps {
   open: boolean;
@@ -34,6 +31,33 @@ const goalSuggestions = [
   'Explore partnership opportunities',
 ];
 
+const stepConfig = {
+  name: {
+    number: 1,
+    title: 'Campaign Name',
+    subtitle: 'Give your campaign a name that describes its purpose',
+    icon: Sparkles,
+  },
+  goal: {
+    number: 2,
+    title: 'Define Your Goal',
+    subtitle: 'What do you want to achieve with this outreach?',
+    icon: Target,
+  },
+  search: {
+    number: 3,
+    title: 'Find Your Audience',
+    subtitle: 'Describe who you want to reach',
+    icon: Search,
+  },
+  saving: {
+    number: 4,
+    title: 'Creating Campaign',
+    subtitle: 'Setting everything up for you',
+    icon: Check,
+  },
+};
+
 export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCampaignDialogProps) {
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
@@ -41,6 +65,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const { toast } = useToast();
 
   const resetState = () => {
@@ -50,12 +75,21 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
     setSearchQuery('');
     setIsSaving(false);
     setIsSearching(false);
+    setIsTransitioning(false);
   };
 
   const handleClose = () => {
     if (isSaving || isSearching) return;
     resetState();
     onOpenChange(false);
+  };
+
+  const transitionTo = (nextStep: Step) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setStep(nextStep);
+      setIsTransitioning(false);
+    }, 200);
   };
 
   const handleNextToGoal = () => {
@@ -67,7 +101,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
       });
       return;
     }
-    setStep('goal');
+    transitionTo('goal');
   };
 
   const handleNextToSearch = () => {
@@ -79,7 +113,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
       });
       return;
     }
-    setStep('search');
+    transitionTo('search');
   };
 
   const handleCreateAndSearch = async () => {
@@ -94,7 +128,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
 
     setIsSaving(true);
     setIsSearching(true);
-    setStep('saving');
+    transitionTo('saving');
 
     try {
       const campaignResult = await createCampaign({
@@ -120,7 +154,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
       }
 
       toast({
-        title: 'Campaign created — search started!',
+        title: 'Campaign created',
         description: 'Leads will be added automatically in 1–2 minutes.',
       });
 
@@ -131,10 +165,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
       console.error('Create/search error:', error);
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to create campaign and start search',
+        description: error?.message || 'Failed to create campaign',
         variant: 'destructive',
       });
-      setStep('search');
+      transitionTo('search');
     } finally {
       setIsSaving(false);
       setIsSearching(false);
@@ -143,180 +177,252 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'Enter' || e.shiftKey) return;
-
     if (step === 'name') handleNextToGoal();
     if (step === 'goal') handleNextToSearch();
     if (step === 'search' && !isSaving && !isSearching) handleCreateAndSearch();
   };
 
-  const steps = ['name', 'goal', 'search'];
+  const steps: Step[] = ['name', 'goal', 'search'];
   const currentStepIndex = steps.indexOf(step);
+  const config = stepConfig[step];
+  const StepIcon = config.icon;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={cn('glass-strong border-border/80 max-w-lg')} aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
-            {step === 'name' && 'Create New Campaign'}
-            {step === 'goal' && "What's Your Goal?"}
-            {step === 'search' && 'Find Leads'}
-            {step === 'saving' && 'Starting Search...'}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent 
+        className={cn(
+          "apple-dialog max-w-2xl p-0 gap-0 border-0 overflow-hidden",
+          "bg-gradient-to-b from-card to-background"
+        )} 
+        aria-describedby={undefined}
+      >
+        {/* Progress bar */}
+        <div className="h-1 bg-muted/30">
+          <div 
+            className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-700 ease-out"
+            style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
+          />
+        </div>
 
-        {/* Step indicators */}
+        <div className="p-10 pb-8">
+          {/* Step indicator */}
+          <div className={cn(
+            "flex items-center gap-3 mb-8 transition-all duration-300",
+            isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+          )}>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
+              <StepIcon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-primary/70 uppercase tracking-widest">
+                  Step {config.number} of 3
+                </span>
+              </div>
+              <h2 className="text-2xl font-semibold text-foreground tracking-tight mt-0.5">
+                {config.title}
+              </h2>
+            </div>
+          </div>
+
+          {/* Step content */}
+          <div className={cn(
+            "transition-all duration-300 min-h-[280px]",
+            isTransitioning ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+          )}>
+            {/* Step 1: Campaign Name */}
+            {step === 'name' && (
+              <div className="space-y-6">
+                <p className="text-muted-foreground text-base leading-relaxed">
+                  {config.subtitle}
+                </p>
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Q1 Outreach - Engineering Leaders"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="apple-input h-14 text-lg"
+                    autoFocus
+                  />
+                </div>
+                <div className="pt-4">
+                  <p className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wider mb-3">
+                    Quick tips
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {['Be specific', 'Include timeframe', 'Target audience'].map((tip) => (
+                      <span 
+                        key={tip}
+                        className="text-xs px-3 py-1.5 rounded-full bg-muted/40 text-muted-foreground"
+                      >
+                        {tip}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Goal */}
+            {step === 'goal' && (
+              <div className="space-y-6">
+                <p className="text-muted-foreground text-base leading-relaxed">
+                  {config.subtitle}
+                </p>
+                <Textarea
+                  placeholder="Book demo calls to show our platform to engineering teams..."
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="apple-input min-h-[120px] text-base resize-none"
+                  autoFocus
+                />
+                <div className="pt-2">
+                  <p className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wider mb-3">
+                    Suggestions
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {goalSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        onClick={() => setGoal(suggestion)}
+                        className={cn(
+                          "text-sm px-4 py-2 rounded-full transition-all duration-200",
+                          "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground",
+                          "border border-transparent hover:border-border/50"
+                        )}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Search */}
+            {step === 'search' && (
+              <div className="space-y-6">
+                <p className="text-muted-foreground text-base leading-relaxed">
+                  {config.subtitle}
+                </p>
+                <Input
+                  placeholder="VPs of Engineering at SaaS companies in the US..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="apple-input h-14 text-lg"
+                  autoFocus
+                />
+                <div className="pt-2">
+                  <p className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wider mb-3">
+                    Popular searches
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {searchSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        onClick={() => setSearchQuery(suggestion)}
+                        className={cn(
+                          "text-sm px-4 py-2 rounded-full transition-all duration-200",
+                          "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground",
+                          "border border-transparent hover:border-border/50"
+                        )}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pt-4 flex items-center gap-3 text-sm text-muted-foreground/70">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  <span>AI will find matching profiles in real-time</span>
+                </div>
+              </div>
+            )}
+
+            {/* Saving state */}
+            {step === 'saving' && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="relative mb-8">
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
+                    <div className="apple-spinner" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Creating your campaign</h3>
+                <p className="text-muted-foreground text-center max-w-sm">
+                  Setting up "{name}" and starting your lead search...
+                </p>
+                <div className="flex items-center gap-6 mt-8">
+                  {['Campaign', 'Search', 'AI'].map((item, i) => (
+                    <div key={item} className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center transition-all duration-500",
+                        i === 0 ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground"
+                      )}>
+                        {i === 0 ? <Check className="w-3 h-3" /> : <span className="text-xs">{i + 1}</span>}
+                      </div>
+                      <span className={cn(
+                        "text-sm",
+                        i === 0 ? "text-foreground" : "text-muted-foreground"
+                      )}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
         {step !== 'saving' && (
-          <div className="flex items-center gap-2 mb-4">
-            {steps.map((s, i) => (
-              <div key={s} className="flex items-center">
-                <div
-                  className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all',
-                    currentStepIndex >= i
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
-                  )}
+          <div className="px-10 py-6 border-t border-border/50 bg-muted/20 flex items-center justify-between">
+            <div>
+              {step !== 'name' && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => transitionTo(step === 'goal' ? 'name' : 'goal')}
+                  className="gap-2 text-muted-foreground hover:text-foreground"
                 >
-                  {i + 1}
-                </div>
-                {i < steps.length - 1 && (
-                  <div className={cn('w-8 h-0.5 mx-1', currentStepIndex > i ? 'bg-primary' : 'bg-muted')} />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Step 1: Campaign Name */}
-        {step === 'name' && (
-          <div className="py-4">
-            <label className="block text-sm font-medium mb-2">Campaign Name</label>
-            <Input
-              placeholder="e.g. Q1 Outreach - Engineering Leaders"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="h-12"
-              autoFocus
-            />
-            <p className="text-sm text-muted-foreground mt-2">Give your campaign a descriptive name</p>
-          </div>
-        )}
-
-        {/* Step 2: Goal */}
-        {step === 'goal' && (
-          <div className="py-4">
-            <div className="relative">
-              <div className="absolute -top-4 -right-4 w-32 h-32 opacity-20">
-                <AbstractBlob className="w-full h-full" />
-              </div>
-
-              <label className="block text-sm font-medium mb-2">What's your outreach goal?</label>
-              <Textarea
-                placeholder="e.g. Book demo calls to show our product to the right teams"
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="min-h-[100px] resize-none"
-                autoFocus
-              />
-
-              <div className="mt-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  Suggestions
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {goalSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => setGoal(suggestion)}
-                      className="text-xs px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <p className="text-sm text-muted-foreground mt-4">
-                This goal will be used to generate personalized outreach for each lead
-              </p>
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Step 3: Search */}
-        {step === 'search' && (
-          <div className="py-4">
-            <div className="relative">
-              <div className="absolute -top-4 -right-4 w-32 h-32 opacity-20">
-                <AbstractBlob className="w-full h-full" />
-              </div>
-
-              <label className="block text-sm font-medium mb-2">Who are you looking for?</label>
-              <Input
-                placeholder="VPs of Engineering at SaaS companies..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="h-12"
-                autoFocus
-              />
-
-              <div className="mt-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  Suggestions
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {searchSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => setSearchQuery(suggestion)}
-                      className="text-xs px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <p className="text-sm text-muted-foreground mt-4">
-                We’ll start a background search — leads will appear in your campaign automatically.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Saving */}
-        {step === 'saving' && (
-          <div className="py-12 flex flex-col items-center">
-            <RingLoader className="w-16 h-16 mb-6" />
-            <p className="text-muted-foreground text-center">Creating campaign and starting lead search…</p>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2">
-          {step === 'name' && (
-            <>
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button onClick={handleNextToGoal}>Next: Set Goal →</Button>
-            </>
-          )}
-          {step === 'goal' && (
-            <>
-              <Button variant="outline" onClick={() => setStep('name')}>← Back</Button>
-              <Button onClick={handleNextToSearch}>Next: Find Leads →</Button>
-            </>
-          )}
-          {step === 'search' && (
-            <>
-              <Button variant="outline" onClick={() => setStep('goal')}>← Back</Button>
-              <Button onClick={handleCreateAndSearch} disabled={isSaving || isSearching}>
-                Start Search →
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                onClick={handleClose}
+                className="text-muted-foreground"
+              >
+                Cancel
               </Button>
-            </>
-          )}
-        </DialogFooter>
+              {step === 'name' && (
+                <Button onClick={handleNextToGoal} className="apple-button gap-2">
+                  Continue
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
+              {step === 'goal' && (
+                <Button onClick={handleNextToSearch} className="apple-button gap-2">
+                  Continue
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
+              {step === 'search' && (
+                <Button 
+                  onClick={handleCreateAndSearch} 
+                  disabled={isSaving || isSearching}
+                  className="apple-button gap-2"
+                >
+                  Create Campaign
+                  <Sparkles className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
