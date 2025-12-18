@@ -48,7 +48,8 @@ export interface GeneratedOutreach {
 // Lead functions
 export async function searchLeadsWithExa(params: {
   query?: string;
-}): Promise<{ success: boolean; leads?: Lead[]; error?: string }> {
+  campaignId?: string;
+}): Promise<{ success: boolean; leads?: Lead[]; websetId?: string; status?: string; message?: string; error?: string }> {
   const { data, error } = await supabase.functions.invoke('exa-search', {
     body: params,
   });
