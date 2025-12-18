@@ -66,33 +66,84 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Save lead to database
-      const { error: insertError } = await supabase.from('leads').insert(lead);
-      
-      if (insertError) {
-        console.error('Error inserting lead:', insertError);
-      } else {
-        console.log('Lead saved successfully:', lead.name);
+      // DUPLICATE CHECK: Look for existing lead with same LinkedIn URL in same campaign
+      let existingLead = null;
+      if (lead.linkedin_url) {
+        const { data: existing } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('linkedin_url', lead.linkedin_url)
+          .eq('campaign_id', campaignId)
+          .maybeSingle();
+        existingLead = existing;
+      }
 
-        // Update items_received count
-        if (searchRecord) {
-          await supabase
-            .from('webset_searches')
-            .update({ items_received: (searchRecord.items_received || 0) + 1 })
-            .eq('webset_id', data.websetId);
+      // If no LinkedIn match, try email
+      if (!existingLead && lead.email) {
+        const { data: existing } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('email', lead.email)
+          .eq('campaign_id', campaignId)
+          .maybeSingle();
+        existingLead = existing;
+      }
+
+      if (existingLead) {
+        // UPDATE existing lead with new data (merge - keep existing values if new ones are empty)
+        const merged = {
+          name: lead.name !== 'Unknown' ? lead.name : existingLead.name,
+          title: lead.title || existingLead.title,
+          company: lead.company || existingLead.company,
+          location: lead.location || existingLead.location,
+          email: lead.email || existingLead.email,
+          linkedin_url: lead.linkedin_url || existingLead.linkedin_url,
+          profile_data: {
+            ...existingLead.profile_data,
+            ...lead.profile_data,
+            merged_at: new Date().toISOString(),
+          },
+        };
+
+        const { error: updateError } = await supabase
+          .from('leads')
+          .update(merged)
+          .eq('id', existingLead.id);
+
+        if (updateError) {
+          console.error('Error updating existing lead:', updateError);
+        } else {
+          console.log('Lead merged with existing:', lead.name, existingLead.id);
         }
+      } else {
+        // INSERT new lead
+        const { error: insertError } = await supabase.from('leads').insert(lead);
+        
+        if (insertError) {
+          console.error('Error inserting lead:', insertError);
+        } else {
+          console.log('New lead saved:', lead.name);
 
-        // Update campaign lead count
-        if (campaignId) {
-          const { count } = await supabase
-            .from('leads')
-            .select('id', { count: 'exact', head: true })
-            .eq('campaign_id', campaignId);
+          // Update items_received count
+          if (searchRecord) {
+            await supabase
+              .from('webset_searches')
+              .update({ items_received: (searchRecord.items_received || 0) + 1 })
+              .eq('webset_id', data.websetId);
+          }
 
-          await supabase
-            .from('campaigns')
-            .update({ lead_count: count || 0 })
-            .eq('id', campaignId);
+          // Update campaign lead count
+          if (campaignId) {
+            const { count } = await supabase
+              .from('leads')
+              .select('id', { count: 'exact', head: true })
+              .eq('campaign_id', campaignId);
+
+            await supabase
+              .from('campaigns')
+              .update({ lead_count: count || 0 })
+              .eq('id', campaignId);
+          }
         }
       }
     }
@@ -133,67 +184,80 @@ Deno.serve(async (req) => {
 function parseLeadFromItem(item: any): any {
   const enrichments = item.enrichments || [];
 
-  // Log the raw enrichments for debugging
   console.log('Raw enrichments:', JSON.stringify(enrichments, null, 2));
 
-  // Enrichments are returned in the order we requested them:
-  // 0: LinkedIn URL, 1: Job title, 2: Company, 3: Location, 4: Email
-  const getEnrichmentResult = (index: number): string => {
-    const enrichment = enrichments[index];
+  // Helper to get result value from enrichment
+  const getResult = (enrichment: any): string => {
     if (!enrichment) return '';
-    
-    // Try different possible field names
     const result = enrichment.result || enrichment.value || enrichment.answer;
     if (!result) return '';
-    
-    // result could be an array or a string
-    if (Array.isArray(result)) {
-      return result[0] || '';
-    }
+    if (Array.isArray(result)) return result[0] || '';
     return String(result);
   };
 
-  const linkedinUrl = getEnrichmentResult(0) || item.url || '';
-  const title = getEnrichmentResult(1) || '';
-  const company = getEnrichmentResult(2) || '';
-  const location = getEnrichmentResult(3) || '';
-  const email = getEnrichmentResult(4) || '';
-
-  // Extract name from enrichment references first (best source for real names)
+  // SMART DETECTION: Identify fields by their content, not by array index
+  let linkedinUrl = '';
+  let email = '';
+  let title = '';
+  let company = '';
+  let location = '';
   let name = '';
-  
-  // Try to get name from the first enrichment's references (LinkedIn profile title)
-  if (enrichments.length > 0 && enrichments[0].references && enrichments[0].references.length > 0) {
-    const refTitle = enrichments[0].references[0].title || '';
-    // The reference title is usually the person's actual name
-    if (refTitle && !refTitle.includes('linkedin.com') && refTitle.length < 50) {
-      name = refTitle;
+
+  for (const enrichment of enrichments) {
+    const val = getResult(enrichment).trim();
+    if (!val) continue;
+
+    // Detect LinkedIn URL
+    if (val.includes('linkedin.com/in/') && !linkedinUrl) {
+      linkedinUrl = val;
+      continue;
     }
-  }
-  
-  // If no name from references, try reasoning field which sometimes has the name
-  if (!name && enrichments.length > 0 && enrichments[0].reasoning) {
-    const reasoning = enrichments[0].reasoning;
-    // Try to extract a name from patterns like "John Smith's LinkedIn profile"
-    const nameMatch = reasoning.match(/^([A-Z][a-z]+ [A-Z][a-z]+)/);
-    if (nameMatch) {
-      name = nameMatch[1];
+
+    // Detect email
+    if (val.includes('@') && val.includes('.') && !val.includes(' ') && !email) {
+      email = val;
+      continue;
+    }
+
+    // Use enrichment description/prompt to identify field type
+    const desc = (enrichment.description || enrichment.prompt || '').toLowerCase();
+    
+    if ((desc.includes('title') || desc.includes('job') || desc.includes('role') || desc.includes('position')) && !title) {
+      title = val;
+    } else if ((desc.includes('company') || desc.includes('employer') || desc.includes('organization')) && !company) {
+      company = val;
+    } else if ((desc.includes('location') || desc.includes('city') || desc.includes('country') || desc.includes('based')) && !location) {
+      location = val;
     }
   }
 
-  // Last resort: extract from LinkedIn URL slug
+  // Fallback: use item.url if no LinkedIn found
+  if (!linkedinUrl && item.url && item.url.includes('linkedin.com/in/')) {
+    linkedinUrl = item.url;
+  }
+
+  // Extract name from enrichment references (best source)
+  for (const enrichment of enrichments) {
+    if (enrichment.references && enrichment.references.length > 0) {
+      const refTitle = enrichment.references[0].title || '';
+      if (refTitle && !refTitle.includes('linkedin.com') && refTitle.length < 50 && refTitle.length > 2) {
+        name = refTitle;
+        break;
+      }
+    }
+  }
+
+  // Fallback: extract name from LinkedIn URL slug
   if (!name && linkedinUrl) {
     const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
     if (urlMatch) {
       let slug = urlMatch[1];
-      // Remove trailing IDs (e.g., "john-smith-12345678" -> "john-smith")
       slug = slug.replace(/-[a-f0-9]{6,}$/i, '');
-      // Convert dashes to spaces
       name = slug.replace(/-/g, ' ');
     }
   }
 
-  // Clean up and capitalize name
+  // Capitalize name
   name = name.trim();
   if (name) {
     name = name.split(' ').map((word: string) => 
@@ -201,7 +265,7 @@ function parseLeadFromItem(item: any): any {
     ).join(' ');
   }
 
-  console.log(`Parsed: name=${name}, title=${title}, company=${company}, location=${location}`);
+  console.log(`Parsed: name=${name}, title=${title}, company=${company}, location=${location}, email=${email}, linkedin=${linkedinUrl}`);
 
   return {
     name: name || 'Unknown',
