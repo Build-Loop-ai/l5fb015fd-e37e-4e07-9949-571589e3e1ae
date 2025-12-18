@@ -1,1 +1,10 @@
 project_id = "fztgukzhaqxxfesomedi"
+
+[functions.exa-search]
+verify_jwt = false
+
+[functions.apify-scrape]
+verify_jwt = false
+
+[functions.generate-outreach]
+verify_jwt = false
