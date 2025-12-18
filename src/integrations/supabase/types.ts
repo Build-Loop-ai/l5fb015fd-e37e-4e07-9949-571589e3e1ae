@@ -18,8 +18,10 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          lead_count: number | null
           name: string
           reply_count: number | null
+          search_query: string | null
           sent_count: number | null
           status: string | null
           updated_at: string
@@ -27,8 +29,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          lead_count?: number | null
           name: string
           reply_count?: number | null
+          search_query?: string | null
           sent_count?: number | null
           status?: string | null
           updated_at?: string
@@ -36,8 +40,10 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          lead_count?: number | null
           name?: string
           reply_count?: number | null
+          search_query?: string | null
           sent_count?: number | null
           status?: string | null
           updated_at?: string
@@ -46,6 +52,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          campaign_id: string | null
           company: string | null
           created_at: string
           email: string | null
@@ -61,6 +68,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          campaign_id?: string | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -76,6 +84,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          campaign_id?: string | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -90,7 +99,15 @@ export type Database = {
           title?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       outreach_messages: {
         Row: {
