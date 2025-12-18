@@ -1,19 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Check, 
-  Linkedin, 
-  Loader2, 
-  Mail, 
-  MessageSquare, 
-  Sparkles,
-  User,
-  Building2,
-  MapPin,
-  Copy,
-  ExternalLink
-} from 'lucide-react';
+import { RingLoader } from '@/components/ui/visual-elements';
 import { Lead, scrapeLinkedInProfile, generateOutreach, GeneratedOutreach } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -122,42 +110,44 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
   return (
     <>
       <div
-        className={`glass rounded-2xl p-5 card-shadow transition-all duration-300 hover:card-shadow-hover ${
-          isSelected ? 'border-primary/50 ring-2 ring-primary/20' : 'hover:border-border/80'
+        className={`glass rounded-2xl p-6 card-shadow transition-all duration-300 hover:shadow-elevated ${
+          isSelected ? 'border-primary/40 ring-2 ring-primary/15' : 'hover:border-border/80'
         }`}
       >
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-5">
           {/* Selection Checkbox */}
           <button
             onClick={onToggleSelect}
             className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 mt-1 ${
               isSelected
-                ? 'bg-primary border-primary text-primary-foreground'
+                ? 'bg-primary border-primary'
                 : 'border-muted-foreground/30 hover:border-primary/50'
             }`}
           >
-            {isSelected && <Check className="w-4 h-4" />}
+            {isSelected && (
+              <div className="w-2.5 h-1.5 border-l-2 border-b-2 border-white -rotate-45 -translate-y-0.5" />
+            )}
           </button>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <h4 className="font-semibold text-foreground text-lg">{lead.name}</h4>
                 {lead.title && (
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <User className="w-4 h-4 text-muted-foreground/70" />
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground" />
                     {lead.title}
                   </p>
                 )}
                 {lead.company && (
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-muted-foreground/70" />
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground" />
                     {lead.company}
                   </p>
                 )}
                 {lead.location && (
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground/70" />
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground" />
                     {lead.location}
                   </p>
                 )}
@@ -169,9 +159,9 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
                     href={lead.linkedin_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 rounded-lg bg-[#0077B5]/10 text-[#0077B5] hover:bg-[#0077B5]/20 transition-colors"
+                    className="p-2.5 rounded-xl bg-[#0077B5]/10 text-[#0077B5] hover:bg-[#0077B5]/20 transition-colors"
                   >
-                    <Linkedin className="w-5 h-5" />
+                    <span className="text-xs font-bold">in</span>
                   </a>
                 )}
                 {lead.industry && (
@@ -184,7 +174,7 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
 
             {/* Enriched Data */}
             {enrichedData && (
-              <div className="mt-4 p-4 rounded-xl bg-muted/50 border border-border/50">
+              <div className="mt-5 p-5 rounded-xl bg-muted/30 border border-border/50">
                 {enrichedData.headline && (
                   <p className="text-foreground font-medium">{enrichedData.headline}</p>
                 )}
@@ -209,14 +199,16 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
                   size="sm"
                   onClick={handleEnrich}
                   disabled={isEnriching}
-                  className="rounded-lg"
+                  className="rounded-xl"
                 >
                   {isEnriching ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <span className="flex items-center gap-2">
+                      <RingLoader className="w-3 h-3" />
+                      Enriching...
+                    </span>
                   ) : (
-                    <Linkedin className="w-4 h-4 mr-2" />
+                    'Enrich Profile'
                   )}
-                  Enrich Profile
                 </Button>
               )}
               <Button
@@ -224,14 +216,16 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
                 size="sm"
                 onClick={handleGenerateOutreach}
                 disabled={isGenerating}
-                className="rounded-lg"
+                className="rounded-xl"
               >
                 {isGenerating ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <span className="flex items-center gap-2">
+                    <RingLoader className="w-3 h-3" />
+                    Generating...
+                  </span>
                 ) : (
-                  <Sparkles className="w-4 h-4 mr-2" />
+                  'Generate Outreach'
                 )}
-                Generate Outreach
               </Button>
             </div>
           </div>
@@ -243,8 +237,17 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
         <DialogContent className="max-w-2xl glass-strong border-border/80">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="icon-badge-sm">
-                <Sparkles className="w-5 h-5 text-primary" />
+              <div className="visual-badge-sm">
+                <div className="w-5 h-5 relative">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute w-0.5 h-2 bg-gradient-to-t from-primary to-transparent origin-bottom left-1/2 -translate-x-1/2"
+                      style={{ transform: `translateX(-50%) rotate(${i * 60}deg)`, transformOrigin: 'bottom center' }}
+                    />
+                  ))}
+                  <div className="absolute inset-[35%] rounded-full bg-primary" />
+                </div>
               </div>
               Outreach for {lead.name}
             </DialogTitle>
@@ -255,21 +258,17 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
               {/* Email Subject */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                    <Mail className="w-4 h-4 text-primary" />
-                    Email Subject
-                  </label>
+                  <label className="text-sm font-semibold text-foreground">Email Subject</label>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => copyToClipboard(outreach.subject, 'Subject')}
-                    className="h-8"
+                    className="h-8 rounded-lg"
                   >
-                    <Copy className="w-4 h-4 mr-2" />
                     Copy
                   </Button>
                 </div>
-                <div className="p-4 rounded-xl bg-muted/50 border border-border/50 text-foreground font-medium">
+                <div className="p-4 rounded-xl bg-muted/30 border border-border/50 text-foreground font-medium">
                   {outreach.subject}
                 </div>
               </div>
@@ -277,48 +276,40 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
               {/* Email Body */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                    <Mail className="w-4 h-4 text-primary" />
-                    Email Body
-                  </label>
+                  <label className="text-sm font-semibold text-foreground">Email Body</label>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => copyToClipboard(outreach.body, 'Email body')}
-                    className="h-8"
+                    className="h-8 rounded-lg"
                   >
-                    <Copy className="w-4 h-4 mr-2" />
                     Copy
                   </Button>
                 </div>
                 <Textarea
                   value={outreach.body}
                   readOnly
-                  className="min-h-[150px] bg-muted/50 border-border/50 resize-none"
+                  className="min-h-[150px] bg-muted/30 border-border/50 resize-none rounded-xl"
                 />
               </div>
 
               {/* LinkedIn Message */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                    <MessageSquare className="w-4 h-4 text-primary" />
-                    LinkedIn Message
-                  </label>
+                  <label className="text-sm font-semibold text-foreground">LinkedIn Message</label>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => copyToClipboard(outreach.linkedin_message, 'LinkedIn message')}
-                    className="h-8"
+                    className="h-8 rounded-lg"
                   >
-                    <Copy className="w-4 h-4 mr-2" />
                     Copy
                   </Button>
                 </div>
                 <Textarea
                   value={outreach.linkedin_message}
                   readOnly
-                  className="min-h-[100px] bg-muted/50 border-border/50 resize-none"
+                  className="min-h-[100px] bg-muted/30 border-border/50 resize-none rounded-xl"
                 />
               </div>
 
@@ -326,11 +317,10 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
               {lead.linkedin_url && (
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className="w-full rounded-xl"
                   onClick={() => window.open(lead.linkedin_url, '_blank')}
                 >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Open LinkedIn Profile
+                  Open LinkedIn Profile →
                 </Button>
               )}
             </div>

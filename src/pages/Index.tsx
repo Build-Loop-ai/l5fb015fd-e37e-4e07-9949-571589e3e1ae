@@ -7,6 +7,7 @@ import { LeadFinder } from '@/components/LeadFinder';
 import { LeadDetailSheet } from '@/components/LeadDetailSheet';
 import { CreateCampaignDialog } from '@/components/CreateCampaignDialog';
 import { Button } from '@/components/ui/button';
+import { RingLoader, AbstractBlob, TargetRings, SparkBurst, DataFlow } from '@/components/ui/visual-elements';
 import { 
   getLeads, 
   getCampaigns, 
@@ -18,20 +19,6 @@ import {
 } from '@/lib/api';
 import { Lead as LegacyLead } from '@/types/lead';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Users, 
-  Send, 
-  MessageSquare, 
-  TrendingUp,
-  Plus,
-  Download,
-  RefreshCw,
-  Loader2,
-  Sparkles,
-  ArrowRight,
-  Target,
-  Zap
-} from 'lucide-react';
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -131,11 +118,9 @@ export default function Index() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-          <p className="text-muted-foreground font-medium">Loading your workspace...</p>
+        <div className="flex flex-col items-center gap-6">
+          <RingLoader className="w-16 h-16" />
+          <p className="text-muted-foreground font-medium">Loading workspace...</p>
         </div>
       </div>
     );
@@ -148,20 +133,19 @@ export default function Index() {
       <main className="ml-72 p-10">
         {activeTab === 'dashboard' && (
           <div className="animate-fade-in">
-            {/* Page Header */}
             <div className="page-header">
               <h1 className="page-title">Dashboard</h1>
               <p className="page-subtitle">Track your outreach performance and lead pipeline</p>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
               <StatCard
                 title="Total Leads"
                 value={stats.totalLeads}
                 change={stats.totalLeads > 0 ? 'In database' : 'Start finding leads'}
                 changeType="positive"
-                icon={Users}
+                visual="users"
                 className="animate-fade-in stagger-1"
               />
               <StatCard
@@ -169,7 +153,7 @@ export default function Index() {
                 value={stats.contacted}
                 change={stats.contacted > 0 ? 'Outreach sent' : 'Ready to contact'}
                 changeType="positive"
-                icon={Send}
+                visual="send"
                 className="animate-fade-in stagger-2"
               />
               <StatCard
@@ -177,7 +161,7 @@ export default function Index() {
                 value={stats.replied}
                 change={stats.replied > 0 ? 'Got responses' : 'Awaiting replies'}
                 changeType="positive"
-                icon={MessageSquare}
+                visual="chat"
                 className="animate-fade-in stagger-3"
               />
               <StatCard
@@ -185,52 +169,42 @@ export default function Index() {
                 value={`${replyRate}%`}
                 change={replyRate > 20 ? 'Above average' : 'Keep going'}
                 changeType={replyRate > 20 ? 'positive' : 'neutral'}
-                icon={TrendingUp}
+                visual="trend"
                 className="animate-fade-in stagger-4"
               />
             </div>
 
             {/* Quick Actions */}
-            <div className="mb-10">
+            <div className="mb-12">
               <div className="section-header">
                 <h2 className="section-title">Quick Actions</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <button
-                  onClick={() => setActiveTab('finder')}
-                  className="action-card text-left relative"
-                >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <button onClick={() => setActiveTab('finder')} className="action-card text-left">
                   <div className="relative z-10">
-                    <div className="icon-badge mb-4">
-                      <Sparkles className="w-7 h-7 text-primary" />
+                    <div className="visual-badge visual-badge-lg mb-5">
+                      <SparkBurst className="w-10 h-10" />
                     </div>
-                    <h3 className="font-semibold text-foreground text-lg mb-1">Find New Leads</h3>
-                    <p className="text-muted-foreground text-sm">AI-powered lead discovery</p>
-                  </div>
-                  <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-                <button
-                  onClick={() => setActiveTab('leads')}
-                  className="action-card text-left relative"
-                >
-                  <div className="relative z-10">
-                    <div className="icon-badge mb-4">
-                      <Target className="w-7 h-7 text-primary" />
-                    </div>
-                    <h3 className="font-semibold text-foreground text-lg mb-1">View Leads</h3>
-                    <p className="text-muted-foreground text-sm">{dbLeads.length} in your database</p>
+                    <h3 className="font-semibold text-foreground text-xl mb-2">Find New Leads</h3>
+                    <p className="text-muted-foreground">AI-powered lead discovery</p>
                   </div>
                 </button>
-                <button
-                  onClick={() => setActiveTab('campaigns')}
-                  className="action-card text-left relative"
-                >
+                <button onClick={() => setActiveTab('leads')} className="action-card text-left">
                   <div className="relative z-10">
-                    <div className="icon-badge mb-4">
-                      <Zap className="w-7 h-7 text-primary" />
+                    <div className="visual-badge visual-badge-lg mb-5">
+                      <TargetRings className="w-10 h-10" />
                     </div>
-                    <h3 className="font-semibold text-foreground text-lg mb-1">Manage Campaigns</h3>
-                    <p className="text-muted-foreground text-sm">{campaigns.length} active campaigns</p>
+                    <h3 className="font-semibold text-foreground text-xl mb-2">View Leads</h3>
+                    <p className="text-muted-foreground">{dbLeads.length} in your database</p>
+                  </div>
+                </button>
+                <button onClick={() => setActiveTab('campaigns')} className="action-card text-left">
+                  <div className="relative z-10">
+                    <div className="visual-badge visual-badge-lg mb-5">
+                      <DataFlow className="w-10 h-10" />
+                    </div>
+                    <h3 className="font-semibold text-foreground text-xl mb-2">Manage Campaigns</h3>
+                    <p className="text-muted-foreground">{campaigns.length} active campaigns</p>
                   </div>
                 </button>
               </div>
@@ -238,12 +212,11 @@ export default function Index() {
 
             {/* Recent Leads */}
             {convertedLeads.length > 0 && (
-              <div className="mb-10 animate-fade-in stagger-5">
+              <div className="mb-12 animate-fade-in stagger-5">
                 <div className="section-header">
                   <h2 className="section-title">Recent Leads</h2>
-                  <Button variant="outline" size="sm" onClick={() => setActiveTab('leads')} className="rounded-lg">
-                    View All
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('leads')} className="rounded-xl">
+                    View All →
                   </Button>
                 </div>
                 <LeadTable 
@@ -258,12 +231,11 @@ export default function Index() {
               <div className="animate-fade-in stagger-6">
                 <div className="section-header">
                   <h2 className="section-title">Campaigns</h2>
-                  <Button variant="outline" size="sm" onClick={() => setActiveTab('campaigns')} className="rounded-lg">
-                    View All
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('campaigns')} className="rounded-xl">
+                    View All →
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {campaigns.slice(0, 4).map((campaign, index) => (
                     <CampaignCard 
                       key={campaign.id} 
@@ -279,17 +251,23 @@ export default function Index() {
             {/* Empty State */}
             {convertedLeads.length === 0 && campaigns.length === 0 && (
               <div className="empty-state animate-fade-in-up">
-                <div className="icon-badge mx-auto mb-6 w-20 h-20 rounded-3xl">
-                  <Users className="w-10 h-10 text-primary" />
+                <div className="relative z-10">
+                  <div className="visual-badge visual-badge-lg mx-auto mb-8 animate-float">
+                    <div className="relative w-12 h-12">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/60" />
+                      </div>
+                      <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
+                    </div>
+                  </div>
+                  <h3 className="text-3xl font-bold text-foreground mb-4">Welcome to LeadPulse</h3>
+                  <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
+                    Start by finding your first leads using AI-powered search. Describe your ideal customer and we'll find them for you.
+                  </p>
+                  <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl px-8 h-14 text-base">
+                    Find Your First Leads →
+                  </Button>
                 </div>
-                <h3 className="text-2xl font-semibold text-foreground mb-3">Welcome to LeadPulse</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Start by finding your first leads using AI-powered search. Describe your ideal customer and we'll find them for you.
-                </p>
-                <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl">
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Find Your First Leads
-                </Button>
               </div>
             )}
           </div>
@@ -303,17 +281,14 @@ export default function Index() {
                 <p className="page-subtitle">{dbLeads.length} leads in your database</p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={loadData} className="rounded-lg">
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                <Button variant="outline" onClick={loadData} className="rounded-xl">
                   Refresh
                 </Button>
-                <Button variant="outline" className="rounded-lg">
-                  <Download className="w-4 h-4 mr-2" />
+                <Button variant="outline" className="rounded-xl">
                   Export
                 </Button>
-                <Button onClick={() => setActiveTab('finder')} className="rounded-lg">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Find Leads
+                <Button onClick={() => setActiveTab('finder')} className="rounded-xl">
+                  + Find Leads
                 </Button>
               </div>
             </div>
@@ -326,15 +301,16 @@ export default function Index() {
               />
             ) : (
               <div className="empty-state">
-                <div className="icon-badge mx-auto mb-6 w-20 h-20 rounded-3xl">
-                  <Users className="w-10 h-10 text-primary" />
+                <div className="relative z-10">
+                  <div className="visual-badge visual-badge-lg mx-auto mb-8">
+                    <TargetRings className="w-12 h-12" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground mb-3">No leads yet</h3>
+                  <p className="text-muted-foreground mb-6">Start by finding leads with AI-powered search</p>
+                  <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl">
+                    Find Leads →
+                  </Button>
                 </div>
-                <h3 className="text-2xl font-semibold text-foreground mb-3">No leads yet</h3>
-                <p className="text-muted-foreground mb-6">Start by finding leads with our AI-powered search</p>
-                <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl">
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Find Leads
-                </Button>
               </div>
             )}
           </div>
@@ -353,13 +329,12 @@ export default function Index() {
                 <h1 className="page-title">Campaigns</h1>
                 <p className="page-subtitle">{campaigns.length} campaigns</p>
               </div>
-              <Button onClick={() => setShowCreateCampaign(true)} className="rounded-lg">
-                <Plus className="w-4 h-4 mr-2" />
-                New Campaign
+              <Button onClick={() => setShowCreateCampaign(true)} className="rounded-xl">
+                + New Campaign
               </Button>
             </div>
             {campaigns.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {campaigns.map((campaign, index) => (
                   <CampaignCard 
                     key={campaign.id} 
@@ -371,15 +346,16 @@ export default function Index() {
               </div>
             ) : (
               <div className="empty-state">
-                <div className="icon-badge mx-auto mb-6 w-20 h-20 rounded-3xl">
-                  <Send className="w-10 h-10 text-primary" />
+                <div className="relative z-10">
+                  <div className="visual-badge visual-badge-lg mx-auto mb-8">
+                    <DataFlow className="w-12 h-12" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground mb-3">No campaigns yet</h3>
+                  <p className="text-muted-foreground mb-6">Create your first outreach campaign</p>
+                  <Button onClick={() => setShowCreateCampaign(true)} size="lg" className="rounded-xl">
+                    + Create Campaign
+                  </Button>
                 </div>
-                <h3 className="text-2xl font-semibold text-foreground mb-3">No campaigns yet</h3>
-                <p className="text-muted-foreground mb-6">Create your first outreach campaign</p>
-                <Button onClick={() => setShowCreateCampaign(true)} size="lg" className="rounded-xl">
-                  <Plus className="w-5 h-5 mr-2" />
-                  Create Campaign
-                </Button>
               </div>
             )}
           </div>
@@ -391,7 +367,7 @@ export default function Index() {
               <h1 className="page-title">Settings</h1>
               <p className="page-subtitle">Configure your account and preferences</p>
             </div>
-            <div className="glass-strong rounded-2xl p-8 max-w-2xl card-shadow">
+            <div className="glass-strong rounded-2xl p-10 max-w-2xl card-shadow">
               <h3 className="text-lg font-semibold text-foreground mb-4">Account Settings</h3>
               <p className="text-muted-foreground">Settings panel coming soon...</p>
             </div>
