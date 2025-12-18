@@ -41,15 +41,32 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
     setSelectedLeads(new Set());
 
     try {
-      const result = await searchLeadsWithExa({ query: query.trim() });
+      const result = await searchLeadsWithExa({ 
+        query: query.trim(),
+        campaignId: campaignId 
+      });
 
-      if (result.success && result.leads) {
-        setFoundLeads(result.leads);
-        setSelectedLeads(new Set(result.leads.map((_, i) => i)));
-        toast({
-          title: 'Search complete!',
-          description: `Found ${result.leads.length} potential leads`,
-        });
+      if (result.success) {
+        // Async mode - leads are being saved in background
+        if (result.status === 'processing') {
+          toast({
+            title: 'Search started!',
+            description: campaignId 
+              ? 'Leads will be added to your campaign automatically. This may take a minute.'
+              : 'Leads will be saved to your database automatically. This may take a minute.',
+          });
+          onLeadsFound?.([]);
+          setQuery('');
+        } 
+        // Legacy sync mode - leads returned directly
+        else if (result.leads) {
+          setFoundLeads(result.leads);
+          setSelectedLeads(new Set(result.leads.map((_, i) => i)));
+          toast({
+            title: 'Search complete!',
+            description: `Found ${result.leads.length} potential leads`,
+          });
+        }
       } else {
         toast({
           title: 'Search failed',
