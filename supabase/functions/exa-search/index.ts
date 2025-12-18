@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const EXA_WEBSETS_BASE = 'https://api.exa.ai/websets/v0';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,69 +25,148 @@ serve(async (req) => {
     }
 
     const searchQuery = query.trim();
-    
-    console.log('Searching Exa with query:', searchQuery);
+    console.log('Creating Webset with query:', searchQuery);
 
-    const response = await fetch('https://api.exa.ai/search', {
+    // Step 1: Create a Webset with search and enrichments
+    const createResponse = await fetch(`${EXA_WEBSETS_BASE}/websets/`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${EXA_API_KEY}`,
+        'x-api-key': EXA_API_KEY,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({
-        query: `${searchQuery} site:linkedin.com/in`,
-        type: 'neural',
-        numResults: 10,
-        contents: {
-          text: true,
-          highlights: true,
+        search: {
+          query: searchQuery,
+          count: 10,
         },
+        enrichments: [
+          {
+            description: "LinkedIn profile URL of this person",
+            format: "text",
+          },
+          {
+            description: "Current job title",
+            format: "text",
+          },
+          {
+            description: "Current company name",
+            format: "text",
+          },
+          {
+            description: "Location (city, country)",
+            format: "text",
+          },
+          {
+            description: "Professional email address if available",
+            format: "text",
+          },
+        ],
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Exa API error:', response.status, errorText);
-      throw new Error(`Exa API error: ${response.status}`);
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.error('Exa Websets create error:', createResponse.status, errorText);
+      throw new Error(`Exa Websets API error: ${createResponse.status}`);
     }
 
-    const data = await response.json();
-    console.log('Exa search returned', data.results?.length || 0, 'results');
+    const webset = await createResponse.json();
+    console.log('Webset created with ID:', webset.id);
 
-    // Parse results to extract lead information
-    const leads = (data.results || []).map((result: any) => {
-      const url = result.url;
-      const text = result.text || '';
-      const title = result.title || '';
+    // Step 2: Poll until the Webset is idle (completed processing)
+    let status = webset.status;
+    let attempts = 0;
+    const maxAttempts = 30; // 60 seconds max wait
+    
+    while (status !== 'idle' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
       
-      // Extract name from LinkedIn URL or title
-      const urlMatch = url.match(/linkedin\.com\/in\/([^\/\?]+)/);
-      const nameFromUrl = urlMatch ? urlMatch[1].replace(/-/g, ' ') : '';
+      const statusResponse = await fetch(`${EXA_WEBSETS_BASE}/websets/${webset.id}`, {
+        method: 'GET',
+        headers: {
+          'x-api-key': EXA_API_KEY,
+          'Accept': 'application/json',
+        },
+      });
       
-      // Try to extract name from title (usually "Name - Title | LinkedIn")
-      const nameMatch = title.match(/^([^-|]+)/);
-      const name = nameMatch ? nameMatch[1].trim() : nameFromUrl;
+      if (!statusResponse.ok) {
+        console.error('Error checking webset status:', statusResponse.status);
+        break;
+      }
       
-      // Extract job title from title
-      const titleMatch = title.match(/-\s*([^|]+)/);
-      const extractedTitle = titleMatch ? titleMatch[1].trim() : '';
+      const statusData = await statusResponse.json();
+      status = statusData.status;
+      console.log(`Webset status: ${status} (attempt ${attempts + 1})`);
+      attempts++;
+    }
+
+    if (status !== 'idle') {
+      console.warn('Webset did not complete in time, fetching partial results');
+    }
+
+    // Step 3: Retrieve Webset Items
+    const itemsResponse = await fetch(`${EXA_WEBSETS_BASE}/websets/${webset.id}/items?limit=50`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': EXA_API_KEY,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!itemsResponse.ok) {
+      const errorText = await itemsResponse.text();
+      console.error('Exa Websets items error:', itemsResponse.status, errorText);
+      throw new Error(`Failed to retrieve webset items: ${itemsResponse.status}`);
+    }
+
+    const itemsData = await itemsResponse.json();
+    console.log('Webset returned', itemsData.data?.length || 0, 'items');
+
+    // Parse items into lead format
+    const leads = (itemsData.data || []).map((item: any) => {
+      const enrichments = item.enrichments || [];
+      
+      // Extract enrichment values by description
+      const getEnrichmentValue = (desc: string) => {
+        const enrichment = enrichments.find((e: any) => 
+          e.description?.toLowerCase().includes(desc.toLowerCase())
+        );
+        return enrichment?.value || '';
+      };
+
+      const linkedinUrl = getEnrichmentValue('linkedin') || item.url || '';
+      const title = getEnrichmentValue('job title') || getEnrichmentValue('title') || '';
+      const company = getEnrichmentValue('company') || '';
+      const location = getEnrichmentValue('location') || '';
+      const email = getEnrichmentValue('email') || '';
+
+      // Extract name from item or URL
+      let name = item.title || '';
+      if (!name && linkedinUrl) {
+        const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+        name = urlMatch ? urlMatch[1].replace(/-/g, ' ') : '';
+      }
 
       return {
         name: name || 'Unknown',
-        title: extractedTitle || '',
-        company: '',
-        linkedin_url: url,
-        location: '',
+        title,
+        company,
+        linkedin_url: linkedinUrl,
+        location,
+        email: email || null,
         industry: '',
         profile_data: {
-          text: text.substring(0, 500),
-          highlights: result.highlights || [],
-          exa_score: result.score,
+          source: 'exa_websets',
+          webset_id: webset.id,
+          item_id: item.id,
+          enrichments: enrichments,
+          raw_item: item,
         },
       };
     });
 
-    return new Response(JSON.stringify({ success: true, leads }), {
+    return new Response(JSON.stringify({ success: true, leads, websetId: webset.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
