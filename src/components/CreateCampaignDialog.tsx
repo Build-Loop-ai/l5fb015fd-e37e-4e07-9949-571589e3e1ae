@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -20,17 +21,24 @@ interface CreateCampaignDialogProps {
   onCreated: () => void;
 }
 
-type Step = 'name' | 'search' | 'results' | 'saving';
+type Step = 'name' | 'goal' | 'search' | 'results' | 'saving';
 
-const suggestions = [
+const searchSuggestions = [
   'Marketing directors at fintech startups',
   'CTOs at Series A healthcare companies',
   'Sales VPs at B2B SaaS companies',
 ];
 
+const goalSuggestions = [
+  'Book demo calls for our platform',
+  'Invite to our upcoming webinar',
+  'Explore partnership opportunities',
+];
+
 export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCampaignDialogProps) {
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
+  const [goal, setGoal] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,6 +49,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
   const resetState = () => {
     setStep('name');
     setName('');
+    setGoal('');
     setSearchQuery('');
     setFoundLeads([]);
     setSelectedLeads(new Set());
@@ -51,11 +60,23 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
     onOpenChange(false);
   };
 
-  const handleNextToSearch = () => {
+  const handleNextToGoal = () => {
     if (!name.trim()) {
       toast({
         title: 'Name required',
         description: 'Please enter a campaign name',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setStep('goal');
+  };
+
+  const handleNextToSearch = () => {
+    if (!goal.trim()) {
+      toast({
+        title: 'Goal required',
+        description: 'Please describe your outreach goal',
         variant: 'destructive',
       });
       return;
@@ -129,9 +150,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
     setStep('saving');
 
     try {
-      // First create the campaign
+      // First create the campaign with goal
       const campaignResult = await createCampaign({
         name: name.trim(),
+        goal: goal.trim(),
         status: 'draft',
         search_query: searchQuery.trim(),
         sent_count: 0,
@@ -170,14 +192,19 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       if (step === 'name') {
+        handleNextToGoal();
+      } else if (step === 'goal') {
         handleNextToSearch();
       } else if (step === 'search' && !isSearching) {
         handleSearch();
       }
     }
   };
+
+  const steps = ['name', 'goal', 'search', 'results'];
+  const currentStepIndex = steps.indexOf(step);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -188,6 +215,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             {step === 'name' && 'Create New Campaign'}
+            {step === 'goal' && 'What\'s Your Goal?'}
             {step === 'search' && 'Find Leads for Campaign'}
             {step === 'results' && `Found ${foundLeads.length} Leads`}
             {step === 'saving' && 'Creating Campaign...'}
@@ -196,20 +224,20 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
 
         {/* Step indicators */}
         <div className="flex items-center gap-2 mb-4">
-          {['name', 'search', 'results'].map((s, i) => (
+          {['name', 'goal', 'search', 'results'].map((s, i) => (
             <div key={s} className="flex items-center">
               <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
-                step === s || ['name', 'search', 'results'].indexOf(step) > i
+                currentStepIndex >= i
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground'
               )}>
                 {i + 1}
               </div>
-              {i < 2 && (
+              {i < 3 && (
                 <div className={cn(
-                  "w-12 h-0.5 mx-2",
-                  ['name', 'search', 'results'].indexOf(step) > i ? 'bg-primary' : 'bg-muted'
+                  "w-8 h-0.5 mx-1",
+                  currentStepIndex > i ? 'bg-primary' : 'bg-muted'
                 )} />
               )}
             </div>
@@ -234,7 +262,49 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
           </div>
         )}
 
-        {/* Step 2: Search Query */}
+        {/* Step 2: Campaign Goal */}
+        {step === 'goal' && (
+          <div className="py-4">
+            <div className="relative">
+              <div className="absolute -top-4 -right-4 w-32 h-32 opacity-20">
+                <AbstractBlob className="w-full h-full" />
+              </div>
+              
+              <label className="block text-sm font-medium mb-2">What's your outreach goal?</label>
+              <Textarea
+                placeholder="e.g. Book demo calls to show our AI-powered analytics platform that helps engineering teams ship faster"
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="min-h-[100px] resize-none"
+                autoFocus
+              />
+
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Suggestions
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {goalSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setGoal(suggestion)}
+                      className="text-xs px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground mt-4">
+                This goal will be used to generate personalized outreach messages for each lead
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Search Query */}
         {step === 'search' && (
           <div className="py-4">
             <div className="relative">
@@ -257,7 +327,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
                   Suggestions
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {suggestions.map((suggestion) => (
+                  {searchSuggestions.map((suggestion) => (
                     <button
                       key={suggestion}
                       onClick={() => setSearchQuery(suggestion)}
@@ -272,7 +342,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
           </div>
         )}
 
-        {/* Step 3: Results */}
+        {/* Step 4: Results */}
         {step === 'results' && (
           <div className="py-2 max-h-[50vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4 sticky top-0 bg-background/80 backdrop-blur-sm py-2 -mx-2 px-2">
@@ -303,13 +373,14 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
                   lead={lead}
                   isSelected={selectedLeads.has(index)}
                   onToggleSelect={() => toggleLeadSelection(index)}
+                  campaignGoal={goal}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* Step 4: Saving */}
+        {/* Step 5: Saving */}
         {step === 'saving' && (
           <div className="py-12 flex flex-col items-center">
             <RingLoader className="w-16 h-16 mb-6" />
@@ -321,12 +392,18 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
           {step === 'name' && (
             <>
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button onClick={handleNextToGoal}>Next: Set Goal →</Button>
+            </>
+          )}
+          {step === 'goal' && (
+            <>
+              <Button variant="outline" onClick={() => setStep('name')}>← Back</Button>
               <Button onClick={handleNextToSearch}>Next: Find Leads →</Button>
             </>
           )}
           {step === 'search' && (
             <>
-              <Button variant="outline" onClick={() => setStep('name')}>← Back</Button>
+              <Button variant="outline" onClick={() => setStep('goal')}>← Back</Button>
               <Button onClick={handleSearch} disabled={isSearching}>
                 {isSearching ? (
                   <span className="flex items-center gap-2">
