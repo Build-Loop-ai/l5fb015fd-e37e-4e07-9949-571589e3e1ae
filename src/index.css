@@ -18,17 +18,17 @@
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 199 89% 48%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 331 100% 59%;
+    --primary-foreground: inherit;
 
-    --secondary: 222 47% 12%;
+    --secondary: inherit;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 222 47% 14%;
     --muted-foreground: 215 20% 55%;
 
-    --accent: 199 89% 48%;
-    --accent-foreground: 222 47% 6%;
+    --accent: 331 100% 59%;
+    --accent-foreground: inherit;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
