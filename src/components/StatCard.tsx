@@ -19,24 +19,30 @@ export function StatCard({
   className 
 }: StatCardProps) {
   return (
-    <div className={cn('stat-card', className)}>
+    <div className={cn('stat-card group', className)}>
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{value}</p>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-muted-foreground mb-2">{title}</p>
+          <p className="text-4xl font-bold text-foreground tracking-tight">{value}</p>
           {change && (
             <p className={cn(
-              'text-sm mt-2 font-medium',
+              'text-sm mt-3 font-medium flex items-center gap-1.5',
               changeType === 'positive' && 'text-success',
               changeType === 'negative' && 'text-destructive',
               changeType === 'neutral' && 'text-muted-foreground'
             )}>
+              <span className={cn(
+                'w-1.5 h-1.5 rounded-full',
+                changeType === 'positive' && 'bg-success',
+                changeType === 'negative' && 'bg-destructive',
+                changeType === 'neutral' && 'bg-muted-foreground'
+              )} />
               {change}
             </p>
           )}
         </div>
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Icon className="w-6 h-6 text-primary" />
+        <div className="icon-badge group-hover:scale-105 transition-transform duration-300">
+          <Icon className="w-7 h-7 text-primary" />
         </div>
       </div>
     </div>
