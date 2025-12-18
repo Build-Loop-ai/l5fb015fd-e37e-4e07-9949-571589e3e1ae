@@ -159,19 +159,47 @@ function parseLeadFromItem(item: any): any {
   const location = getEnrichmentResult(3) || '';
   const email = getEnrichmentResult(4) || '';
 
-  // Parse name from item.title or URL
-  let name = item.title || '';
-  if (!name && linkedinUrl) {
-    const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
-    name = urlMatch ? urlMatch[1].replace(/-/g, ' ') : '';
+  // Extract name from enrichment references first (best source for real names)
+  let name = '';
+  
+  // Try to get name from the first enrichment's references (LinkedIn profile title)
+  if (enrichments.length > 0 && enrichments[0].references && enrichments[0].references.length > 0) {
+    const refTitle = enrichments[0].references[0].title || '';
+    // The reference title is usually the person's actual name
+    if (refTitle && !refTitle.includes('linkedin.com') && refTitle.length < 50) {
+      name = refTitle;
+    }
+  }
+  
+  // If no name from references, try reasoning field which sometimes has the name
+  if (!name && enrichments.length > 0 && enrichments[0].reasoning) {
+    const reasoning = enrichments[0].reasoning;
+    // Try to extract a name from patterns like "John Smith's LinkedIn profile"
+    const nameMatch = reasoning.match(/^([A-Z][a-z]+ [A-Z][a-z]+)/);
+    if (nameMatch) {
+      name = nameMatch[1];
+    }
   }
 
-  // Clean up name - remove trailing numbers/IDs (e.g., "john smith 12345678" -> "john smith")
-  name = name.replace(/\s+[a-f0-9]{6,}$/i, '').trim();
-  // Also remove patterns like "name-12345" from URL slugs
-  name = name.replace(/-[a-f0-9]{6,}$/i, '').replace(/-/g, ' ').trim();
-  // Capitalize first letter of each word
-  name = name.split(' ').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+  // Last resort: extract from LinkedIn URL slug
+  if (!name && linkedinUrl) {
+    const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+    if (urlMatch) {
+      let slug = urlMatch[1];
+      // Remove trailing IDs (e.g., "john-smith-12345678" -> "john-smith")
+      slug = slug.replace(/-[a-f0-9]{6,}$/i, '');
+      // Convert dashes to spaces
+      name = slug.replace(/-/g, ' ');
+    }
+  }
+
+  // Clean up and capitalize name
+  name = name.trim();
+  if (name) {
+    name = name.split(' ').map((word: string) => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  }
 
   console.log(`Parsed: name=${name}, title=${title}, company=${company}, location=${location}`);
 
