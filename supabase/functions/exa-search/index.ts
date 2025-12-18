@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: webhookUrl,
-        events: ['webset.item.enriched', 'webset.idle'],
+        events: ['webset.idle'],  // Only listen for completion, then batch fetch all items
       }),
     });
 
