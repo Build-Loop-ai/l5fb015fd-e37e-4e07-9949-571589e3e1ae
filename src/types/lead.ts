@@ -14,6 +14,8 @@ export interface Lead {
   createdAt: string;
   tags?: string[];
   notes?: string;
+  profile_data?: any;
+  profileData?: any; // Alias for UI components
 }
 
 export interface Campaign {

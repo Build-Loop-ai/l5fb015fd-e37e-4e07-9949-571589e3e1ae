@@ -24,8 +24,8 @@ serve(async (req) => {
 
     console.log('Scraping LinkedIn profile:', linkedinUrl);
 
-    // Use Apify's LinkedIn Profile Scraper actor
-    const actorId = 'anchor~linkedin-profile-scraper';
+    // Use the new LinkedIn Profile Scraper actor (2SyF0bVxmgGr8IVCZ)
+    const actorId = '2SyF0bVxmgGr8IVCZ';
     
     const response = await fetch(
       `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${APIFY_API_KEY}`,
@@ -36,9 +36,6 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           profileUrls: [linkedinUrl],
-          proxy: {
-            useApifyProxy: true,
-          },
         }),
       }
     );
@@ -46,44 +43,103 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Apify API error:', response.status, errorText);
-      
-      // Return mock data if Apify fails (for demo purposes)
-      const mockProfile = {
-        name: extractNameFromUrl(linkedinUrl),
-        headline: 'Professional',
-        location: 'United States',
-        summary: 'Experienced professional with a track record of success.',
-        experience: [],
-        education: [],
-        skills: [],
-      };
-      
-      return new Response(
-        JSON.stringify({ success: true, profile: mockProfile, isMock: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error(`Apify API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Apify scrape completed');
+    console.log('Apify scrape completed, items:', data.length);
 
-    const profile = data[0] || {};
+    if (!data || data.length === 0) {
+      throw new Error('No profile data returned from Apify');
+    }
+
+    const profile = data[0];
     
+    // Extract and normalize the comprehensive profile data
+    const linkedinProfile = {
+      // Basic info
+      fullName: profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+      firstName: profile.firstName || '',
+      lastName: profile.lastName || '',
+      headline: profile.headline || '',
+      summary: profile.summary || profile.about || '',
+      
+      // Contact info
+      email: profile.email || null,
+      mobileNumber: profile.mobileNumber || null,
+      
+      // Current job
+      jobTitle: profile.jobTitle || profile.headline || '',
+      companyName: profile.companyName || '',
+      companyIndustry: profile.companyIndustry || '',
+      companySize: profile.companySize || '',
+      companyWebsite: profile.companyWebsite || '',
+      companyLinkedin: profile.companyLinkedin || '',
+      jobLocation: profile.jobLocation || '',
+      jobStartedOn: profile.jobStartedOn || '',
+      currentJobDuration: profile.currentJobDuration || '',
+      
+      // Profile stats
+      connections: profile.connections || 0,
+      followers: profile.followers || 0,
+      
+      // Full experience history
+      experiences: (profile.experiences || []).map((exp: any) => ({
+        title: exp.title || '',
+        companyName: exp.companyName || '',
+        description: exp.jobDescription || exp.description || '',
+        location: exp.jobLocation || exp.location || '',
+        startDate: exp.jobStartedOn || exp.startDate || '',
+        endDate: exp.jobEndedOn || exp.endDate || null,
+        stillWorking: exp.jobStillWorking || false,
+        duration: exp.duration || '',
+        companyIndustry: exp.companyIndustry || '',
+        companySize: exp.companySize || '',
+      })),
+      
+      // Education
+      educations: (profile.educations || []).map((edu: any) => ({
+        schoolName: edu.schoolName || edu.school || '',
+        degree: edu.degree || '',
+        fieldOfStudy: edu.fieldOfStudy || edu.field || '',
+        startYear: edu.startYear || '',
+        endYear: edu.endYear || '',
+        description: edu.description || '',
+      })),
+      
+      // Skills
+      skills: (profile.skills || []).map((skill: any) => ({
+        title: typeof skill === 'string' ? skill : (skill.title || skill.name || ''),
+      })),
+      
+      // Languages
+      languages: (profile.languages || []).map((lang: any) => ({
+        name: typeof lang === 'string' ? lang : (lang.name || ''),
+        proficiency: typeof lang === 'object' ? lang.proficiency : '',
+      })),
+      
+      // Certifications
+      certifications: (profile.certifications || []).map((cert: any) => ({
+        name: cert.name || cert.title || '',
+        authority: cert.authority || cert.organization || '',
+        issueDate: cert.issueDate || '',
+      })),
+      
+      // Profile URL and identifiers
+      linkedinUrl: profile.linkedinUrl || profile.linkedinPublicUrl || linkedinUrl,
+      publicIdentifier: profile.publicIdentifier || '',
+      profilePicture: profile.profilePicture || profile.profilePictureUrl || '',
+      
+      // Raw data for reference
+      _raw: profile,
+    };
+
+    console.log('Profile extracted:', linkedinProfile.fullName, '- Skills:', linkedinProfile.skills.length, '- Experiences:', linkedinProfile.experiences.length);
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        profile: {
-          name: profile.fullName || profile.firstName + ' ' + profile.lastName || extractNameFromUrl(linkedinUrl),
-          headline: profile.headline || profile.title || '',
-          location: profile.location || profile.addressLocality || '',
-          summary: profile.summary || profile.about || '',
-          currentCompany: profile.currentCompany || profile.company || '',
-          experience: profile.experience || profile.positions || [],
-          education: profile.education || [],
-          skills: profile.skills || [],
-          connections: profile.connections || profile.connectionsCount,
-          profilePicture: profile.profilePicture || profile.image,
-        }
+        profile: linkedinProfile,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -96,15 +152,3 @@ serve(async (req) => {
     );
   }
 });
-
-function extractNameFromUrl(url: string): string {
-  const match = url.match(/linkedin\.com\/in\/([^\/\?]+)/);
-  if (match) {
-    return match[1]
-      .replace(/-/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-  return 'Unknown';
-}
