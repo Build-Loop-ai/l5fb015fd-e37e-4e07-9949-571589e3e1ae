@@ -6,6 +6,7 @@ import { CampaignCard } from '@/components/CampaignCard';
 import { LeadFinder } from '@/components/LeadFinder';
 import { LeadDetailSheet } from '@/components/LeadDetailSheet';
 import { CreateCampaignDialog } from '@/components/CreateCampaignDialog';
+import { SettingsPage } from '@/components/SettingsPage';
 import { Button } from '@/components/ui/button';
 import { RingLoader, AbstractBlob, TargetRings, SparkBurst, DataFlow } from '@/components/ui/visual-elements';
 import { 
@@ -433,18 +434,7 @@ export default function Index() {
           </div>
         )}
 
-        {activeTab === 'settings' && (
-          <div className="animate-fade-in">
-            <div className="page-header">
-              <h1 className="page-title">Settings</h1>
-              <p className="page-subtitle">Configure your account and preferences</p>
-            </div>
-            <div className="glass-strong rounded-2xl p-10 max-w-2xl card-shadow">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Account Settings</h3>
-              <p className="text-muted-foreground">Settings panel coming soon...</p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'settings' && <SettingsPage />}
       </main>
 
       <LeadDetailSheet
