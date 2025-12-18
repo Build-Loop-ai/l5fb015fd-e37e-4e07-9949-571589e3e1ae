@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Lead } from '@/types/lead';
+import { Campaign } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +12,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface LeadTableProps {
   leads: Lead[];
+  campaigns?: Campaign[];
+  selectedCampaignId?: string | null;
+  onCampaignFilterChange?: (campaignId: string | null) => void;
   onLeadClick: (lead: Lead) => void;
   onStatusChange?: (leadId: string, status: string) => void;
   onDelete?: (leadId: string) => void;
@@ -29,7 +40,15 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   lost: { label: 'Lost', color: 'bg-destructive/15 text-destructive border-destructive/30' },
 };
 
-export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: LeadTableProps) {
+export function LeadTable({ 
+  leads, 
+  campaigns,
+  selectedCampaignId,
+  onCampaignFilterChange,
+  onLeadClick, 
+  onStatusChange, 
+  onDelete 
+}: LeadTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<keyof Lead>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -60,10 +79,12 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
     }
   };
 
+  const selectedCampaign = campaigns?.find(c => c.id === selectedCampaignId);
+
   return (
     <div className="glass-strong rounded-2xl overflow-hidden card-shadow">
       {/* Header */}
-      <div className="p-6 border-b border-border flex items-center gap-4">
+      <div className="p-6 border-b border-border flex items-center gap-4 flex-wrap">
         <div className="search-input flex items-center gap-4 px-5 py-3 flex-1 max-w-md">
           <div className="w-4 h-4 relative flex-shrink-0">
             <div className="w-3 h-3 rounded-full border-2 border-muted-foreground" />
@@ -76,10 +97,56 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
             className="border-0 bg-transparent focus-visible:ring-0 px-0 h-auto"
           />
         </div>
+        
+        {/* Campaign Filter */}
+        {campaigns && campaigns.length > 0 && onCampaignFilterChange && (
+          <Select 
+            value={selectedCampaignId || 'all'} 
+            onValueChange={(val) => onCampaignFilterChange(val === 'all' ? null : val)}
+          >
+            <SelectTrigger className="w-[200px] rounded-xl">
+              <SelectValue placeholder="Filter by campaign" />
+            </SelectTrigger>
+            <SelectContent className="glass-strong">
+              <SelectItem value="all">All Campaigns</SelectItem>
+              {campaigns.map((campaign) => (
+                <SelectItem key={campaign.id} value={campaign.id || ''}>
+                  {campaign.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         <Button variant="outline" size="sm" className="rounded-xl">
           Filters
         </Button>
       </div>
+
+      {/* Campaign Info Banner */}
+      {selectedCampaign && (
+        <div className="px-6 py-3 bg-primary/5 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary">
+              Campaign
+            </Badge>
+            <span className="font-medium text-foreground">{selectedCampaign.name}</span>
+            {selectedCampaign.search_query && (
+              <span className="text-sm text-muted-foreground">
+                · "{selectedCampaign.search_query}"
+              </span>
+            )}
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => onCampaignFilterChange?.(null)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Clear filter
+          </Button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -260,6 +327,7 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
       <div className="p-6 border-t border-border flex items-center justify-between">
         <p className="text-sm text-muted-foreground font-medium">
           Showing {filteredLeads.length} of {leads.length} leads
+          {selectedCampaign && ` in "${selectedCampaign.name}"`}
         </p>
       </div>
     </div>

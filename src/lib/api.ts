@@ -22,6 +22,8 @@ export interface Campaign {
   status?: string;
   sent_count?: number;
   reply_count?: number;
+  search_query?: string;
+  lead_count?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -93,15 +95,52 @@ export async function generateOutreach(params: {
   return data;
 }
 
-export async function saveLeads(leads: Lead[]): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.from('leads').insert(leads);
+export async function saveLeads(leads: Lead[], campaignId?: string): Promise<{ success: boolean; error?: string }> {
+  const leadsWithCampaign = leads.map(lead => ({
+    ...lead,
+    campaign_id: campaignId || null,
+  }));
+
+  const { error } = await supabase.from('leads').insert(leadsWithCampaign);
 
   if (error) {
     console.error('Save leads error:', error);
     return { success: false, error: error.message };
   }
 
+  // Update campaign lead_count if campaign_id provided
+  if (campaignId) {
+    await updateCampaignLeadCount(campaignId);
+  }
+
   return { success: true };
+}
+
+export async function updateCampaignLeadCount(campaignId: string): Promise<void> {
+  const { count } = await supabase
+    .from('leads')
+    .select('*', { count: 'exact', head: true })
+    .eq('campaign_id', campaignId);
+
+  await supabase
+    .from('campaigns')
+    .update({ lead_count: count || 0 })
+    .eq('id', campaignId);
+}
+
+export async function getLeadsByCampaign(campaignId: string): Promise<{ success: boolean; leads?: Lead[]; error?: string }> {
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('campaign_id', campaignId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Get leads by campaign error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, leads: data };
 }
 
 export async function getLeads(): Promise<{ success: boolean; leads?: Lead[]; error?: string }> {

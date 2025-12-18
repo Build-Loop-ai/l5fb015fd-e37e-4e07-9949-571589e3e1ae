@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Campaign, updateCampaign, deleteCampaign } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RingLoader } from '@/components/ui/visual-elements';
+import { RingLoader, SparkBurst } from '@/components/ui/visual-elements';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -15,6 +15,8 @@ import {
 interface CampaignCardProps {
   campaign: Campaign;
   onUpdate?: () => void;
+  onViewLeads?: (campaign: Campaign) => void;
+  onFindMoreLeads?: (campaign: Campaign) => void;
   className?: string;
 }
 
@@ -25,7 +27,7 @@ const statusConfig = {
   completed: { label: 'Completed', color: 'bg-primary/15 text-primary border-primary/30' },
 };
 
-export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProps) {
+export function CampaignCard({ campaign, onUpdate, onViewLeads, onFindMoreLeads, className }: CampaignCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const status = statusConfig[campaign.status as keyof typeof statusConfig] || statusConfig.draft;
@@ -69,7 +71,7 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
   return (
     <div className={cn('glass rounded-2xl p-7 card-shadow hover:shadow-elevated transition-all duration-500 group', className)}>
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-xl text-foreground truncate">{campaign.name}</h3>
           {campaign.created_at && (
@@ -120,20 +122,57 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
         </div>
       </div>
 
+      {/* Search Query */}
+      {campaign.search_query && (
+        <div className="mb-5 p-3 rounded-xl bg-muted/30 border border-border/30">
+          <p className="text-xs font-medium text-muted-foreground mb-1">Search Query</p>
+          <p className="text-sm text-foreground line-clamp-2">{campaign.search_query}</p>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="text-center p-4 rounded-xl bg-muted/20 border border-border/30">
-          <div className="text-2xl font-bold text-foreground">{campaign.sent_count || 0}</div>
-          <div className="text-xs text-muted-foreground font-medium mt-1">Sent</div>
+      <div className="grid grid-cols-4 gap-3 mb-5">
+        <div className="text-center p-3 rounded-xl bg-muted/20 border border-border/30">
+          <div className="text-xl font-bold text-foreground">{campaign.lead_count || 0}</div>
+          <div className="text-xs text-muted-foreground font-medium mt-0.5">Leads</div>
         </div>
-        <div className="text-center p-4 rounded-xl bg-muted/20 border border-border/30">
-          <div className="text-2xl font-bold text-foreground">{campaign.reply_count || 0}</div>
-          <div className="text-xs text-muted-foreground font-medium mt-1">Replies</div>
+        <div className="text-center p-3 rounded-xl bg-muted/20 border border-border/30">
+          <div className="text-xl font-bold text-foreground">{campaign.sent_count || 0}</div>
+          <div className="text-xs text-muted-foreground font-medium mt-0.5">Sent</div>
         </div>
-        <div className="text-center p-4 rounded-xl bg-muted/20 border border-border/30">
-          <div className="text-2xl font-bold text-foreground">{replyRate}%</div>
-          <div className="text-xs text-muted-foreground font-medium mt-1">Rate</div>
+        <div className="text-center p-3 rounded-xl bg-muted/20 border border-border/30">
+          <div className="text-xl font-bold text-foreground">{campaign.reply_count || 0}</div>
+          <div className="text-xs text-muted-foreground font-medium mt-0.5">Replies</div>
         </div>
+        <div className="text-center p-3 rounded-xl bg-muted/20 border border-border/30">
+          <div className="text-xl font-bold text-foreground">{replyRate}%</div>
+          <div className="text-xs text-muted-foreground font-medium mt-0.5">Rate</div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        {onViewLeads && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 rounded-xl"
+            onClick={() => onViewLeads(campaign)}
+          >
+            View Leads ({campaign.lead_count || 0})
+          </Button>
+        )}
+        {onFindMoreLeads && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="rounded-xl gap-2"
+            onClick={() => onFindMoreLeads(campaign)}
+          >
+            <SparkBurst className="w-3.5 h-3.5" />
+            Find More
+          </Button>
+        )}
       </div>
     </div>
   );

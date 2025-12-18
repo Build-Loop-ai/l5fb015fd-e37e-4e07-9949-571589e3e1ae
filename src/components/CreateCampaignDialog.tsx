@@ -8,16 +8,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { createCampaign } from '@/lib/api';
+import { createCampaign, searchLeadsWithExa, saveLeads, Lead, Campaign } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { RingLoader, SparkBurst, AbstractBlob } from '@/components/ui/visual-elements';
+import { LeadResultCard } from './LeadResultCard';
+import { cn } from '@/lib/utils';
 
 interface CreateCampaignDialogProps {
   open: boolean;
@@ -25,13 +20,38 @@ interface CreateCampaignDialogProps {
   onCreated: () => void;
 }
 
+type Step = 'name' | 'search' | 'results' | 'saving';
+
+const suggestions = [
+  'Marketing directors at fintech startups',
+  'CTOs at Series A healthcare companies',
+  'Sales VPs at B2B SaaS companies',
+];
+
 export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCampaignDialogProps) {
+  const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
-  const [status, setStatus] = useState<string>('draft');
-  const [isCreating, setIsCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [foundLeads, setFoundLeads] = useState<Lead[]>([]);
+  const [selectedLeads, setSelectedLeads] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
-  const handleCreate = async () => {
+  const resetState = () => {
+    setStep('name');
+    setName('');
+    setSearchQuery('');
+    setFoundLeads([]);
+    setSelectedLeads(new Set());
+  };
+
+  const handleClose = () => {
+    resetState();
+    onOpenChange(false);
+  };
+
+  const handleNextToSearch = () => {
     if (!name.trim()) {
       toast({
         title: 'Name required',
@@ -40,80 +60,293 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
       });
       return;
     }
+    setStep('search');
+  };
 
-    setIsCreating(true);
-    try {
-      const result = await createCampaign({
-        name: name.trim(),
-        status,
-        sent_count: 0,
-        reply_count: 0,
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast({
+        title: 'Enter a search query',
+        description: 'Describe who you want to find',
+        variant: 'destructive',
       });
+      return;
+    }
 
-      if (result.success) {
-        toast({ title: 'Campaign created!' });
-        setName('');
-        setStatus('draft');
-        onCreated();
+    setIsSearching(true);
+    try {
+      const result = await searchLeadsWithExa({ query: searchQuery.trim() });
+      if (result.success && result.leads) {
+        setFoundLeads(result.leads);
+        setSelectedLeads(new Set(result.leads.map((_, i) => i)));
+        setStep('results');
+        toast({
+          title: 'Search complete!',
+          description: `Found ${result.leads.length} potential leads`,
+        });
       } else {
         toast({
-          title: 'Failed to create campaign',
-          description: result.error,
+          title: 'Search failed',
+          description: result.error || 'No results found',
           variant: 'destructive',
         });
       }
     } catch (error) {
-      console.error('Create error:', error);
+      console.error('Search error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to create campaign',
+        title: 'Search error',
+        description: 'Failed to search for leads',
         variant: 'destructive',
       });
     } finally {
-      setIsCreating(false);
+      setIsSearching(false);
+    }
+  };
+
+  const toggleLeadSelection = (index: number) => {
+    const newSelected = new Set(selectedLeads);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedLeads(newSelected);
+  };
+
+  const handleCreateCampaign = async () => {
+    const leadsToSave = foundLeads.filter((_, i) => selectedLeads.has(i));
+    
+    if (leadsToSave.length === 0) {
+      toast({
+        title: 'No leads selected',
+        description: 'Please select at least one lead',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    setStep('saving');
+
+    try {
+      // First create the campaign
+      const campaignResult = await createCampaign({
+        name: name.trim(),
+        status: 'draft',
+        search_query: searchQuery.trim(),
+        sent_count: 0,
+        reply_count: 0,
+      });
+
+      if (!campaignResult.success || !campaignResult.campaign?.id) {
+        throw new Error(campaignResult.error || 'Failed to create campaign');
+      }
+
+      // Then save leads with campaign_id
+      const leadsResult = await saveLeads(leadsToSave, campaignResult.campaign.id);
+
+      if (!leadsResult.success) {
+        throw new Error(leadsResult.error || 'Failed to save leads');
+      }
+
+      toast({
+        title: 'Campaign created!',
+        description: `${leadsToSave.length} leads added to "${name}"`,
+      });
+
+      resetState();
+      onCreated();
+    } catch (error: any) {
+      console.error('Create campaign error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create campaign',
+        variant: 'destructive',
+      });
+      setStep('results');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (step === 'name') {
+        handleNextToSearch();
+      } else if (step === 'search' && !isSearching) {
+        handleSearch();
+      }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className={cn(
+        "glass-strong border-border/80 transition-all duration-300",
+        step === 'results' ? 'max-w-4xl max-h-[85vh] overflow-hidden' : 'max-w-lg'
+      )}>
         <DialogHeader>
-          <DialogTitle>Create New Campaign</DialogTitle>
+          <DialogTitle className="text-xl font-bold">
+            {step === 'name' && 'Create New Campaign'}
+            {step === 'search' && 'Find Leads for Campaign'}
+            {step === 'results' && `Found ${foundLeads.length} Leads`}
+            {step === 'saving' && 'Creating Campaign...'}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div>
+        {/* Step indicators */}
+        <div className="flex items-center gap-2 mb-4">
+          {['name', 'search', 'results'].map((s, i) => (
+            <div key={s} className="flex items-center">
+              <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
+                step === s || ['name', 'search', 'results'].indexOf(step) > i
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground'
+              )}>
+                {i + 1}
+              </div>
+              {i < 2 && (
+                <div className={cn(
+                  "w-12 h-0.5 mx-2",
+                  ['name', 'search', 'results'].indexOf(step) > i ? 'bg-primary' : 'bg-muted'
+                )} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Step 1: Campaign Name */}
+        {step === 'name' && (
+          <div className="py-4">
             <label className="block text-sm font-medium mb-2">Campaign Name</label>
             <Input
               placeholder="e.g. Q1 Outreach - Engineering Leaders"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="h-12"
+              autoFocus
             />
+            <p className="text-sm text-muted-foreground mt-2">
+              Give your campaign a descriptive name
+            </p>
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Status</label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="paused">Paused</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Step 2: Search Query */}
+        {step === 'search' && (
+          <div className="py-4">
+            <div className="relative">
+              <div className="absolute -top-4 -right-4 w-32 h-32 opacity-20">
+                <AbstractBlob className="w-full h-full" />
+              </div>
+              
+              <label className="block text-sm font-medium mb-2">Who are you looking for?</label>
+              <Input
+                placeholder="VPs of Engineering at SaaS companies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="h-12"
+                autoFocus
+              />
+
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Suggestions
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setSearchQuery(suggestion)}
+                      className="text-xs px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleCreate} disabled={isCreating}>
-            {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Create Campaign
-          </Button>
+        {/* Step 3: Results */}
+        {step === 'results' && (
+          <div className="py-2 max-h-[50vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sticky top-0 bg-background/80 backdrop-blur-sm py-2 -mx-2 px-2">
+              <p className="text-sm text-muted-foreground">
+                {selectedLeads.size} of {foundLeads.length} selected
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedLeads(new Set(foundLeads.map((_, i) => i)))}
+                >
+                  Select All
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedLeads(new Set())}
+                >
+                  Deselect All
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {foundLeads.map((lead, index) => (
+                <LeadResultCard
+                  key={index}
+                  lead={lead}
+                  isSelected={selectedLeads.has(index)}
+                  onToggleSelect={() => toggleLeadSelection(index)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Saving */}
+        {step === 'saving' && (
+          <div className="py-12 flex flex-col items-center">
+            <RingLoader className="w-16 h-16 mb-6" />
+            <p className="text-muted-foreground">Creating your campaign and saving leads...</p>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2">
+          {step === 'name' && (
+            <>
+              <Button variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button onClick={handleNextToSearch}>Next: Find Leads →</Button>
+            </>
+          )}
+          {step === 'search' && (
+            <>
+              <Button variant="outline" onClick={() => setStep('name')}>← Back</Button>
+              <Button onClick={handleSearch} disabled={isSearching}>
+                {isSearching ? (
+                  <span className="flex items-center gap-2">
+                    <RingLoader className="w-4 h-4" />
+                    Searching...
+                  </span>
+                ) : (
+                  'Search Leads →'
+                )}
+              </Button>
+            </>
+          )}
+          {step === 'results' && (
+            <>
+              <Button variant="outline" onClick={() => setStep('search')}>← Search Again</Button>
+              <Button onClick={handleCreateCampaign} disabled={selectedLeads.size === 0}>
+                Create Campaign with {selectedLeads.size} Leads
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

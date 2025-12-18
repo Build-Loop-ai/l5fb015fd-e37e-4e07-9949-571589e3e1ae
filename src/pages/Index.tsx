@@ -12,6 +12,7 @@ import {
   getLeads, 
   getCampaigns, 
   getStats, 
+  getLeadsByCampaign,
   Lead as ApiLead, 
   Campaign,
   updateLeadStatus,
@@ -28,6 +29,8 @@ export default function Index() {
   const [stats, setStats] = useState({ totalLeads: 0, contacted: 0, replied: 0, qualified: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [findMoreCampaign, setFindMoreCampaign] = useState<Campaign | null>(null);
   const { toast } = useToast();
 
   const loadData = async () => {
@@ -58,9 +61,33 @@ export default function Index() {
     }
   };
 
+  const loadLeadsForCampaign = async (campaignId: string) => {
+    try {
+      const result = await getLeadsByCampaign(campaignId);
+      if (result.success && result.leads) {
+        setDbLeads(result.leads);
+      }
+    } catch (error) {
+      console.error('Failed to load campaign leads:', error);
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (selectedCampaignId) {
+      loadLeadsForCampaign(selectedCampaignId);
+    } else {
+      // Reload all leads when filter is cleared
+      getLeads().then(result => {
+        if (result.success && result.leads) {
+          setDbLeads(result.leads);
+        }
+      });
+    }
+  }, [selectedCampaignId]);
 
   const convertedLeads: LegacyLead[] = dbLeads.map((lead) => ({
     id: lead.id || '',
@@ -82,6 +109,7 @@ export default function Index() {
 
   const handleLeadsFound = () => {
     loadData();
+    setFindMoreCampaign(null);
     toast({
       title: 'Leads updated',
       description: 'Your lead database has been refreshed',
@@ -111,6 +139,16 @@ export default function Index() {
     } else {
       toast({ title: 'Failed to delete lead', variant: 'destructive' });
     }
+  };
+
+  const handleViewCampaignLeads = (campaign: Campaign) => {
+    setSelectedCampaignId(campaign.id || null);
+    setActiveTab('leads');
+  };
+
+  const handleFindMoreLeads = (campaign: Campaign) => {
+    setFindMoreCampaign(campaign);
+    setActiveTab('finder');
   };
 
   const replyRate = stats.contacted > 0 ? Math.round((stats.replied / stats.contacted) * 100) : 0;
@@ -180,13 +218,13 @@ export default function Index() {
                 <h2 className="section-title">Quick Actions</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <button onClick={() => setActiveTab('finder')} className="action-card text-left">
+                <button onClick={() => setShowCreateCampaign(true)} className="action-card text-left">
                   <div className="relative z-10">
                     <div className="visual-badge visual-badge-lg mb-5">
                       <SparkBurst className="w-10 h-10" />
                     </div>
-                    <h3 className="font-semibold text-foreground text-xl mb-2">Find New Leads</h3>
-                    <p className="text-muted-foreground">AI-powered lead discovery</p>
+                    <h3 className="font-semibold text-foreground text-xl mb-2">New Campaign</h3>
+                    <p className="text-muted-foreground">Create campaign with leads</p>
                   </div>
                 </button>
                 <button onClick={() => setActiveTab('leads')} className="action-card text-left">
@@ -204,7 +242,7 @@ export default function Index() {
                       <DataFlow className="w-10 h-10" />
                     </div>
                     <h3 className="font-semibold text-foreground text-xl mb-2">Manage Campaigns</h3>
-                    <p className="text-muted-foreground">{campaigns.length} active campaigns</p>
+                    <p className="text-muted-foreground">{campaigns.length} campaigns</p>
                   </div>
                 </button>
               </div>
@@ -241,6 +279,8 @@ export default function Index() {
                       key={campaign.id} 
                       campaign={campaign}
                       onUpdate={loadData}
+                      onViewLeads={handleViewCampaignLeads}
+                      onFindMoreLeads={handleFindMoreLeads}
                       className={`animate-fade-in stagger-${index + 1}`}
                     />
                   ))}
@@ -262,10 +302,10 @@ export default function Index() {
                   </div>
                   <h3 className="text-3xl font-bold text-foreground mb-4">Welcome to LeadPulse</h3>
                   <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
-                    Start by finding your first leads using AI-powered search. Describe your ideal customer and we'll find them for you.
+                    Start by creating a campaign to find and organize your leads using AI-powered search.
                   </p>
-                  <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl px-8 h-14 text-base">
-                    Find Your First Leads →
+                  <Button onClick={() => setShowCreateCampaign(true)} size="lg" className="rounded-xl px-8 h-14 text-base">
+                    Create Your First Campaign →
                   </Button>
                 </div>
               </div>
@@ -278,23 +318,30 @@ export default function Index() {
             <div className="flex items-center justify-between mb-10">
               <div className="page-header mb-0">
                 <h1 className="page-title">Leads</h1>
-                <p className="page-subtitle">{dbLeads.length} leads in your database</p>
+                <p className="page-subtitle">
+                  {selectedCampaignId 
+                    ? `Viewing leads from campaign` 
+                    : `${dbLeads.length} leads in your database`}
+                </p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={loadData} className="rounded-xl">
+                <Button variant="outline" onClick={() => { setSelectedCampaignId(null); loadData(); }} className="rounded-xl">
                   Refresh
                 </Button>
                 <Button variant="outline" className="rounded-xl">
                   Export
                 </Button>
-                <Button onClick={() => setActiveTab('finder')} className="rounded-xl">
-                  + Find Leads
+                <Button onClick={() => setShowCreateCampaign(true)} className="rounded-xl">
+                  + New Campaign
                 </Button>
               </div>
             </div>
-            {convertedLeads.length > 0 ? (
+            {convertedLeads.length > 0 || selectedCampaignId ? (
               <LeadTable 
                 leads={convertedLeads}
+                campaigns={campaigns}
+                selectedCampaignId={selectedCampaignId}
+                onCampaignFilterChange={setSelectedCampaignId}
                 onLeadClick={(lead) => setSelectedLead(lead)}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDeleteLead}
@@ -306,9 +353,9 @@ export default function Index() {
                     <TargetRings className="w-12 h-12" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">No leads yet</h3>
-                  <p className="text-muted-foreground mb-6">Start by finding leads with AI-powered search</p>
-                  <Button onClick={() => setActiveTab('finder')} size="lg" className="rounded-xl">
-                    Find Leads →
+                  <p className="text-muted-foreground mb-6">Create a campaign to start finding leads</p>
+                  <Button onClick={() => setShowCreateCampaign(true)} size="lg" className="rounded-xl">
+                    Create Campaign →
                   </Button>
                 </div>
               </div>
@@ -318,7 +365,30 @@ export default function Index() {
 
         {activeTab === 'finder' && (
           <div className="animate-fade-in py-6">
-            <LeadFinder onLeadsFound={handleLeadsFound} />
+            {findMoreCampaign ? (
+              <>
+                <div className="mb-6 flex items-center gap-4">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setFindMoreCampaign(null)}
+                    className="rounded-xl"
+                  >
+                    ← Back
+                  </Button>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Adding leads to campaign</p>
+                    <p className="font-semibold text-foreground">{findMoreCampaign.name}</p>
+                  </div>
+                </div>
+                <LeadFinder 
+                  onLeadsFound={handleLeadsFound}
+                  campaignId={findMoreCampaign.id}
+                  campaignName={findMoreCampaign.name}
+                />
+              </>
+            ) : (
+              <LeadFinder onLeadsFound={handleLeadsFound} />
+            )}
           </div>
         )}
 
@@ -340,6 +410,8 @@ export default function Index() {
                     key={campaign.id} 
                     campaign={campaign}
                     onUpdate={loadData}
+                    onViewLeads={handleViewCampaignLeads}
+                    onFindMoreLeads={handleFindMoreLeads}
                     className={`animate-fade-in stagger-${index + 1}`}
                   />
                 ))}
@@ -351,7 +423,7 @@ export default function Index() {
                     <DataFlow className="w-12 h-12" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">No campaigns yet</h3>
-                  <p className="text-muted-foreground mb-6">Create your first outreach campaign</p>
+                  <p className="text-muted-foreground mb-6">Create a campaign to find and organize leads</p>
                   <Button onClick={() => setShowCreateCampaign(true)} size="lg" className="rounded-xl">
                     + Create Campaign
                   </Button>

@@ -8,6 +8,8 @@ import { LeadResultCard } from './LeadResultCard';
 
 interface LeadFinderProps {
   onLeadsFound?: (leads: Lead[]) => void;
+  campaignId?: string;
+  campaignName?: string;
 }
 
 const suggestions = [
@@ -16,7 +18,7 @@ const suggestions = [
   'Sales VPs at B2B SaaS with 50-200 employees',
 ];
 
-export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
+export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinderProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [foundLeads, setFoundLeads] = useState<Lead[]>([]);
@@ -96,11 +98,13 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
 
     setIsSaving(true);
     try {
-      const result = await saveLeads(leadsToSave);
+      const result = await saveLeads(leadsToSave, campaignId);
       if (result.success) {
         toast({
           title: 'Leads saved!',
-          description: `${leadsToSave.length} leads added to your database`,
+          description: campaignId 
+            ? `${leadsToSave.length} leads added to campaign "${campaignName}"`
+            : `${leadsToSave.length} leads added to your database`,
         });
         onLeadsFound?.(leadsToSave);
         setFoundLeads([]);
@@ -137,9 +141,13 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
             <SparkBurst className="w-12 h-12" />
           </div>
         </div>
-        <h2 className="text-4xl font-bold text-foreground mb-4 tracking-tight">Find Your Ideal Leads</h2>
+        <h2 className="text-4xl font-bold text-foreground mb-4 tracking-tight">
+          {campaignId ? `Find Leads for "${campaignName}"` : 'Find Your Ideal Leads'}
+        </h2>
         <p className="text-muted-foreground text-xl max-w-md mx-auto">
-          Describe who you're looking for and let AI find them
+          {campaignId 
+            ? 'Add more leads to your campaign'
+            : 'Describe who you\'re looking for and let AI find them'}
         </p>
       </div>
 
