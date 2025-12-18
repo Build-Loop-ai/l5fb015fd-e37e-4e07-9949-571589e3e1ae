@@ -48,29 +48,34 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
 
       if (result.success) {
         // Async mode - leads are being saved in background
-        if (result.status === 'processing') {
+        if (result.status === 'processing' || result.websetId) {
           toast({
             title: 'Search started!',
             description: campaignId 
-              ? 'Leads will be added to your campaign automatically. This may take a minute.'
-              : 'Leads will be saved to your database automatically. This may take a minute.',
+              ? 'Leads will be added to your campaign automatically. This may take 1-2 minutes.'
+              : 'Leads will be saved to your database automatically. This may take 1-2 minutes.',
           });
           onLeadsFound?.([]);
           setQuery('');
         } 
         // Legacy sync mode - leads returned directly
-        else if (result.leads) {
+        else if (result.leads && result.leads.length > 0) {
           setFoundLeads(result.leads);
           setSelectedLeads(new Set(result.leads.map((_, i) => i)));
           toast({
             title: 'Search complete!',
             description: `Found ${result.leads.length} potential leads`,
           });
+        } else {
+          toast({
+            title: 'Search initiated',
+            description: 'Processing your request...',
+          });
         }
       } else {
         toast({
           title: 'Search failed',
-          description: result.error || 'No results found',
+          description: result.error || 'Unable to start search. Please try again.',
           variant: 'destructive',
         });
       }
