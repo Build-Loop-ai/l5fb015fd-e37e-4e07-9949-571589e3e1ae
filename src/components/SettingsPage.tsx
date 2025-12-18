@@ -70,14 +70,6 @@ export function SettingsPage() {
     weeklyReport: true,
   });
 
-  const [apiKeys, setApiKeys] = useState({
-    exaApiKey: '',
-    apifyApiKey: '',
-  });
-
-  const [showExaKey, setShowExaKey] = useState(false);
-  const [showApifyKey, setShowApifyKey] = useState(false);
-
   const handleSaveProfile = () => {
     toast({
       title: 'Profile saved',
@@ -89,13 +81,6 @@ export function SettingsPage() {
     toast({
       title: 'Preferences saved',
       description: 'Your notification preferences have been updated.',
-    });
-  };
-
-  const handleSaveApiKeys = () => {
-    toast({
-      title: 'API keys saved',
-      description: 'Your API keys have been securely stored.',
     });
   };
 
@@ -177,74 +162,6 @@ export function SettingsPage() {
           </div>
         </SettingsSection>
 
-        {/* API Keys Section */}
-        <SettingsSection 
-          title="API Integrations" 
-          description="Connect external services to power your lead generation"
-          className="animate-fade-in stagger-2"
-        >
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="exa-key">Exa API Key</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Used for AI-powered lead search. Get your key at{' '}
-                <a href="https://exa.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                  exa.ai
-                </a>
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  id="exa-key"
-                  type={showExaKey ? 'text' : 'password'}
-                  value={apiKeys.exaApiKey}
-                  onChange={(e) => setApiKeys({ ...apiKeys, exaApiKey: e.target.value })}
-                  placeholder="exa-xxxxxxxxxxxxxxxx"
-                  className="apple-input flex-1"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowExaKey(!showExaKey)}
-                  className="rounded-xl"
-                >
-                  {showExaKey ? 'Hide' : 'Show'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="apify-key">Apify API Token</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Used for LinkedIn profile scraping. Get your token at{' '}
-                <a href="https://apify.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                  apify.com
-                </a>
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  id="apify-key"
-                  type={showApifyKey ? 'text' : 'password'}
-                  value={apiKeys.apifyApiKey}
-                  onChange={(e) => setApiKeys({ ...apiKeys, apifyApiKey: e.target.value })}
-                  placeholder="apify_api_xxxxxxxx"
-                  className="apple-input flex-1"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowApifyKey(!showApifyKey)}
-                  className="rounded-xl"
-                >
-                  {showApifyKey ? 'Hide' : 'Show'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <Button onClick={handleSaveApiKeys} className="apple-button">
-                Save API Keys
-              </Button>
-            </div>
-          </div>
-        </SettingsSection>
 
         {/* Notifications Section */}
         <SettingsSection 
