@@ -3,6 +3,9 @@ project_id = "fztgukzhaqxxfesomedi"
 [functions.exa-search]
 verify_jwt = false
 
+[functions.exa-webhook]
+verify_jwt = false
+
 [functions.apify-scrape]
 verify_jwt = false
 

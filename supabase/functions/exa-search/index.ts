@@ -1,10 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Declare EdgeRuntime for background tasks
-declare const EdgeRuntime: {
-  waitUntil(promise: Promise<unknown>): void;
-};
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -12,131 +7,14 @@ const corsHeaders = {
 
 const EXA_WEBSETS_BASE = 'https://api.exa.ai/websets/v0';
 
-async function pollAndSaveLeads(websetId: string, campaignId: string | null, EXA_API_KEY: string) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  console.log(`Background task started for webset ${websetId}`);
-
-  // Poll until the Webset is idle (completed processing)
-  let status = 'running';
-  let attempts = 0;
-  const maxAttempts = 60; // 2 minutes max wait
-
-  while (status !== 'idle' && attempts < maxAttempts) {
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-
-    const statusResponse = await fetch(`${EXA_WEBSETS_BASE}/websets/${websetId}`, {
-      method: 'GET',
-      headers: {
-        'x-api-key': EXA_API_KEY,
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!statusResponse.ok) {
-      console.error('Error checking webset status:', statusResponse.status);
-      break;
-    }
-
-    const statusData = await statusResponse.json();
-    status = statusData.status;
-    console.log(`Webset ${websetId} status: ${status} (attempt ${attempts + 1})`);
-    attempts++;
-  }
-
-  // Retrieve Webset Items
-  const itemsResponse = await fetch(`${EXA_WEBSETS_BASE}/websets/${websetId}/items?limit=50`, {
-    method: 'GET',
-    headers: {
-      'x-api-key': EXA_API_KEY,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!itemsResponse.ok) {
-    console.error('Failed to retrieve webset items:', itemsResponse.status);
-    return;
-  }
-
-  const itemsData = await itemsResponse.json();
-  console.log(`Webset ${websetId} returned ${itemsData.data?.length || 0} items`);
-
-  // Parse items into lead format and save to database
-  const leads = (itemsData.data || []).map((item: any) => {
-    const enrichments = item.enrichments || [];
-
-    // Enrichments are returned in the order we requested them:
-    // 0: LinkedIn URL, 1: Job title, 2: Company, 3: Location, 4: Email
-    const getEnrichmentResult = (index: number) => {
-      const enrichment = enrichments[index];
-      if (!enrichment || !enrichment.result) return '';
-      // result is an array, get first element
-      return Array.isArray(enrichment.result) ? enrichment.result[0] || '' : String(enrichment.result);
-    };
-
-    const linkedinUrl = getEnrichmentResult(0) || item.url || '';
-    const title = getEnrichmentResult(1) || '';
-    const company = getEnrichmentResult(2) || '';
-    const location = getEnrichmentResult(3) || '';
-    const email = getEnrichmentResult(4) || '';
-
-    // Parse name from item.title (e.g., "John Smith - Marketing Director")
-    let name = item.title || '';
-    if (!name && linkedinUrl) {
-      const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
-      name = urlMatch ? urlMatch[1].replace(/-/g, ' ') : '';
-    }
-
-    console.log(`Parsed lead: ${name}, title: ${title}, company: ${company}`);
-
-    return {
-      name: name || 'Unknown',
-      title: title || null,
-      company: company || null,
-      linkedin_url: linkedinUrl || null,
-      location: location || null,
-      email: email || null,
-      industry: null,
-      campaign_id: campaignId,
-      status: 'new',
-      profile_data: {
-        source: 'exa_websets',
-        webset_id: websetId,
-        item_id: item.id,
-        enrichments: enrichments,
-      },
-    };
-  });
-
-  if (leads.length > 0) {
-    const { error } = await supabase.from('leads').insert(leads);
-    if (error) {
-      console.error('Error saving leads to database:', error);
-    } else {
-      console.log(`Saved ${leads.length} leads to database`);
-
-      // Update campaign lead count if campaignId provided
-      if (campaignId) {
-        const { data: countData } = await supabase
-          .from('leads')
-          .select('id', { count: 'exact' })
-          .eq('campaign_id', campaignId);
-
-        await supabase
-          .from('campaigns')
-          .update({ lead_count: countData?.length || leads.length })
-          .eq('id', campaignId);
-      }
-    }
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     const { query, campaignId } = await req.json();
@@ -153,8 +31,36 @@ Deno.serve(async (req) => {
     const searchQuery = query.trim();
     console.log('Creating Webset with query:', searchQuery);
 
-    // Create a Webset with search and enrichments
-    const createResponse = await fetch(`${EXA_WEBSETS_BASE}/websets/`, {
+    // Get the webhook URL - this is our edge function URL
+    const webhookUrl = `${supabaseUrl}/functions/v1/exa-webhook`;
+    console.log('Webhook URL:', webhookUrl);
+
+    // Step 1: Create a webhook to receive notifications
+    console.log('Creating webhook...');
+    const webhookResponse = await fetch(`${EXA_WEBSETS_BASE}/webhooks`, {
+      method: 'POST',
+      headers: {
+        'x-api-key': EXA_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        url: webhookUrl,
+        events: ['webset.item.enriched', 'webset.idle'],
+      }),
+    });
+
+    if (!webhookResponse.ok) {
+      const errorText = await webhookResponse.text();
+      console.error('Webhook creation error:', webhookResponse.status, errorText);
+      throw new Error(`Failed to create webhook: ${webhookResponse.status}`);
+    }
+
+    const webhook = await webhookResponse.json();
+    console.log('Webhook created with ID:', webhook.id);
+
+    // Step 2: Create a Webset with search and enrichments
+    const createResponse = await fetch(`${EXA_WEBSETS_BASE}/websets`, {
       method: 'POST',
       headers: {
         'x-api-key': EXA_API_KEY,
@@ -185,15 +91,28 @@ Deno.serve(async (req) => {
     const webset = await createResponse.json();
     console.log('Webset created with ID:', webset.id);
 
-    // Start background task to poll and save leads
-    EdgeRuntime.waitUntil(pollAndSaveLeads(webset.id, campaignId || null, EXA_API_KEY));
+    // Step 3: Store the search record for webhook correlation
+    const { error: insertError } = await supabase.from('webset_searches').insert({
+      webset_id: webset.id,
+      campaign_id: campaignId || null,
+      query: searchQuery,
+      status: 'processing',
+      webhook_secret: webhook.secret || null,
+    });
 
-    // Return immediately with webset ID
+    if (insertError) {
+      console.error('Error storing search record:', insertError);
+    } else {
+      console.log('Search record stored for webset:', webset.id);
+    }
+
+    // Return immediately - webhook will handle the results
     return new Response(JSON.stringify({
       success: true,
       websetId: webset.id,
+      webhookId: webhook.id,
       status: 'processing',
-      message: 'Search started. Leads will be saved to the database automatically.',
+      message: 'Search started. Leads will be saved automatically via webhook.',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
