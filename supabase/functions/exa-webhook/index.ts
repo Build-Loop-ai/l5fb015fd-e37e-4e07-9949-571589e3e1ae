@@ -54,6 +54,18 @@ Deno.serve(async (req) => {
 
       console.log('Parsed lead:', JSON.stringify(lead, null, 2));
 
+      // VALIDATE: Only save leads with meaningful data
+      const hasValidName = lead.name && lead.name !== 'Unknown' && lead.name.trim().length > 0;
+      const hasLinkedIn = lead.linkedin_url && lead.linkedin_url.includes('linkedin.com');
+      const hasEmail = lead.email && lead.email.includes('@');
+
+      if (!hasValidName && !hasLinkedIn && !hasEmail) {
+        console.log('Skipping invalid lead - no name, linkedin, or email');
+        return new Response(JSON.stringify({ success: true, skipped: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       // Save lead to database
       const { error: insertError } = await supabase.from('leads').insert(lead);
       
