@@ -12,7 +12,7 @@ import {
   Building2,
   MapPin
 } from 'lucide-react';
-import { Lead, scrapeLinkedInProfile, generateOutreach, OutreachMessage } from '@/lib/api';
+import { Lead, scrapeLinkedInProfile, generateOutreach, GeneratedOutreach } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -32,7 +32,7 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect }: LeadResultC
   const [isEnriching, setIsEnriching] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [enrichedData, setEnrichedData] = useState<any>(null);
-  const [outreach, setOutreach] = useState<OutreachMessage | null>(null);
+  const [outreach, setOutreach] = useState<GeneratedOutreach | null>(null);
   const [showOutreachDialog, setShowOutreachDialog] = useState(false);
   const { toast } = useToast();
 

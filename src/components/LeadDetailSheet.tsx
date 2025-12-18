@@ -24,11 +24,13 @@ interface LeadDetailSheetProps {
   onClose: () => void;
 }
 
-const statusVariants: Record<Lead['status'], 'new' | 'contacted' | 'responded' | 'qualified' | 'lost'> = {
+const statusVariants: Record<string, string> = {
   new: 'new',
   contacted: 'contacted',
   responded: 'responded',
   qualified: 'qualified',
+  replied: 'replied',
+  unqualified: 'unqualified',
   lost: 'lost',
 };
 
@@ -59,7 +61,7 @@ export function LeadDetailSheet({ lead, open, onClose }: LeadDetailSheetProps) {
             </div>
             <div className="flex-1 glass rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">Status</p>
-              <Badge variant={statusVariants[lead.status]} className="mt-1">
+              <Badge variant={statusVariants[lead.status] as any || 'new'} className="mt-1">
                 {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
               </Badge>
             </div>
@@ -69,21 +71,28 @@ export function LeadDetailSheet({ lead, open, onClose }: LeadDetailSheetProps) {
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-foreground">Contact Information</h3>
             <div className="space-y-2">
-              <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                <Mail className="w-4 h-4 text-primary" />
-                <span className="text-sm text-foreground">{lead.email}</span>
-              </div>
+              {lead.email && (
+                <div className="flex items-center gap-3 p-3 glass rounded-lg">
+                  <Mail className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-foreground">{lead.email}</span>
+                </div>
+              )}
               {lead.phone && (
                 <div className="flex items-center gap-3 p-3 glass rounded-lg">
                   <Phone className="w-4 h-4 text-primary" />
                   <span className="text-sm text-foreground">{lead.phone}</span>
                 </div>
               )}
-              {lead.linkedIn && (
-                <div className="flex items-center gap-3 p-3 glass rounded-lg">
+              {lead.linkedin && (
+                <a 
+                  href={lead.linkedin} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
+                >
                   <Linkedin className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-foreground">{lead.linkedIn}</span>
-                </div>
+                  <span className="text-sm text-foreground">View LinkedIn Profile</span>
+                </a>
               )}
             </div>
           </div>
@@ -92,17 +101,23 @@ export function LeadDetailSheet({ lead, open, onClose }: LeadDetailSheetProps) {
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-foreground">Company Details</h3>
             <div className="space-y-2">
-              <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                <Building2 className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-foreground">{lead.company}</p>
-                  <p className="text-xs text-muted-foreground">{lead.industry}</p>
+              {lead.company && (
+                <div className="flex items-center gap-3 p-3 glass rounded-lg">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-foreground">{lead.company}</p>
+                    {lead.industry && (
+                      <p className="text-xs text-muted-foreground">{lead.industry}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">{lead.location}</span>
-              </div>
+              )}
+              {lead.location && (
+                <div className="flex items-center gap-3 p-3 glass rounded-lg">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-foreground">{lead.location}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -113,16 +128,28 @@ export function LeadDetailSheet({ lead, open, onClose }: LeadDetailSheetProps) {
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-foreground">Added on {lead.createdAt}</p>
-                  {lead.lastContacted && (
+                  <p className="text-sm text-foreground">
+                    Added on {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'Unknown'}
+                  </p>
+                  {lead.lastContact && (
                     <p className="text-xs text-muted-foreground">
-                      Last contacted: {lead.lastContacted}
+                      Last contact: {new Date(lead.lastContact).toLocaleDateString()}
                     </p>
                   )}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Notes */}
+          {lead.notes && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground">Notes</h3>
+              <div className="glass rounded-lg p-3">
+                <p className="text-sm text-muted-foreground">{lead.notes}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -131,9 +158,11 @@ export function LeadDetailSheet({ lead, open, onClose }: LeadDetailSheetProps) {
             <Send className="w-4 h-4 mr-2" />
             Send Outreach
           </Button>
-          <Button variant="outline">
-            <Mail className="w-4 h-4" />
-          </Button>
+          {lead.email && (
+            <Button variant="outline" onClick={() => window.location.href = `mailto:${lead.email}`}>
+              <Mail className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </SheetContent>
     </Sheet>

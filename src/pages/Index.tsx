@@ -5,45 +5,70 @@ import { LeadTable } from '@/components/LeadTable';
 import { CampaignCard } from '@/components/CampaignCard';
 import { LeadFinder } from '@/components/LeadFinder';
 import { LeadDetailSheet } from '@/components/LeadDetailSheet';
+import { CreateCampaignDialog } from '@/components/CreateCampaignDialog';
 import { Button } from '@/components/ui/button';
-import { mockCampaigns } from '@/data/mockData';
+import { 
+  getLeads, 
+  getCampaigns, 
+  getStats, 
+  Lead as ApiLead, 
+  Campaign,
+  updateLeadStatus,
+  deleteLead,
+} from '@/lib/api';
 import { Lead as LegacyLead } from '@/types/lead';
-import { getLeads, Lead as ApiLead } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Users, 
   Send, 
-  Eye, 
+  MessageSquare, 
   TrendingUp,
   Plus,
   Download,
-  Upload,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedLead, setSelectedLead] = useState<LegacyLead | null>(null);
   const [dbLeads, setDbLeads] = useState<ApiLead[]>([]);
-  const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [stats, setStats] = useState({ totalLeads: 0, contacted: 0, replied: 0, qualified: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
   const { toast } = useToast();
 
-  const loadLeads = async () => {
-    setIsLoadingLeads(true);
+  const loadData = async () => {
+    setIsLoading(true);
     try {
-      const result = await getLeads();
-      if (result.success && result.leads) {
-        setDbLeads(result.leads);
+      const [leadsResult, campaignsResult, statsResult] = await Promise.all([
+        getLeads(),
+        getCampaigns(),
+        getStats(),
+      ]);
+
+      if (leadsResult.success && leadsResult.leads) {
+        setDbLeads(leadsResult.leads);
       }
+      if (campaignsResult.success && campaignsResult.campaigns) {
+        setCampaigns(campaignsResult.campaigns);
+      }
+      setStats(statsResult);
     } catch (error) {
-      console.error('Failed to load leads:', error);
+      console.error('Failed to load data:', error);
+      toast({
+        title: 'Error loading data',
+        description: 'Please try refreshing the page',
+        variant: 'destructive',
+      });
     } finally {
-      setIsLoadingLeads(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadLeads();
+    loadData();
   }, []);
 
   // Convert API leads to legacy format for the table
@@ -65,20 +90,48 @@ export default function Index() {
     createdAt: lead.created_at || new Date().toISOString(),
   }));
 
-  const stats = {
-    totalLeads: dbLeads.length,
-    contacted: dbLeads.filter(l => l.status !== 'new').length,
-    responses: dbLeads.filter(l => l.status === 'replied' || l.status === 'qualified').length,
-    avgScore: dbLeads.length > 0 ? 75 : 0,
-  };
-
   const handleLeadsFound = () => {
-    loadLeads();
+    loadData();
     toast({
       title: 'Leads updated',
       description: 'Your lead database has been refreshed',
     });
   };
+
+  const handleCampaignCreated = () => {
+    loadData();
+    setShowCreateCampaign(false);
+  };
+
+  const handleStatusChange = async (leadId: string, newStatus: string) => {
+    const result = await updateLeadStatus(leadId, newStatus);
+    if (result.success) {
+      loadData();
+      toast({ title: 'Status updated' });
+    } else {
+      toast({ title: 'Failed to update status', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    const result = await deleteLead(leadId);
+    if (result.success) {
+      loadData();
+      toast({ title: 'Lead deleted' });
+    } else {
+      toast({ title: 'Failed to delete lead', variant: 'destructive' });
+    }
+  };
+
+  const replyRate = stats.contacted > 0 ? Math.round((stats.replied / stats.contacted) * 100) : 0;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -111,18 +164,18 @@ export default function Index() {
                 className="stagger-2"
               />
               <StatCard
-                title="Responses"
-                value={stats.responses}
-                change={stats.responses > 0 ? 'Replied' : 'Awaiting replies'}
+                title="Replied"
+                value={stats.replied}
+                change={stats.replied > 0 ? 'Got responses' : 'Awaiting replies'}
                 changeType="positive"
-                icon={Eye}
+                icon={MessageSquare}
                 className="stagger-3"
               />
               <StatCard
-                title="Conversion"
-                value={stats.totalLeads > 0 ? `${Math.round((stats.responses / Math.max(stats.contacted, 1)) * 100)}%` : '0%'}
-                change="Reply rate"
-                changeType="positive"
+                title="Reply Rate"
+                value={`${replyRate}%`}
+                change={replyRate > 20 ? 'Above average' : 'Keep going'}
+                changeType={replyRate > 20 ? 'positive' : 'neutral'}
                 icon={TrendingUp}
                 className="stagger-4"
               />
@@ -157,7 +210,7 @@ export default function Index() {
                 >
                   <TrendingUp className="w-8 h-8 text-primary" />
                   <span className="font-medium">Manage Campaigns</span>
-                  <span className="text-xs text-muted-foreground">Track outreach</span>
+                  <span className="text-xs text-muted-foreground">{campaigns.length} campaigns</span>
                 </Button>
               </div>
             </div>
@@ -179,23 +232,38 @@ export default function Index() {
             )}
 
             {/* Active Campaigns */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-foreground">Active Campaigns</h2>
-                <Button variant="outline" size="sm" onClick={() => setActiveTab('campaigns')}>
-                  View All
+            {campaigns.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-foreground">Campaigns</h2>
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('campaigns')}>
+                    View All
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {campaigns.slice(0, 4).map((campaign, index) => (
+                    <CampaignCard 
+                      key={campaign.id} 
+                      campaign={campaign}
+                      onUpdate={loadData}
+                      className={`animate-fade-in stagger-${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {convertedLeads.length === 0 && campaigns.length === 0 && (
+              <div className="glass rounded-xl p-12 text-center">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Get started</h3>
+                <p className="text-muted-foreground mb-4">Find your first leads using AI-powered search</p>
+                <Button onClick={() => setActiveTab('finder')}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Find Leads
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockCampaigns.filter(c => c.status === 'active').map((campaign, index) => (
-                  <CampaignCard 
-                    key={campaign.id} 
-                    campaign={campaign}
-                    className={`animate-fade-in stagger-${index + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -204,11 +272,11 @@ export default function Index() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground mb-2">Leads</h1>
-                <p className="text-muted-foreground">Manage and track your lead database</p>
+                <p className="text-muted-foreground">{dbLeads.length} leads in your database</p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={loadLeads} disabled={isLoadingLeads}>
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingLeads ? 'animate-spin' : ''}`} />
+                <Button variant="outline" onClick={loadData}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh
                 </Button>
                 <Button variant="outline">
@@ -225,6 +293,8 @@ export default function Index() {
               <LeadTable 
                 leads={convertedLeads}
                 onLeadClick={(lead) => setSelectedLead(lead)}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDeleteLead}
               />
             ) : (
               <div className="glass rounded-xl p-12 text-center">
@@ -251,22 +321,35 @@ export default function Index() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground mb-2">Campaigns</h1>
-                <p className="text-muted-foreground">Create and manage your outreach campaigns</p>
+                <p className="text-muted-foreground">{campaigns.length} campaigns</p>
               </div>
-              <Button>
+              <Button onClick={() => setShowCreateCampaign(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Campaign
               </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {mockCampaigns.map((campaign, index) => (
-                <CampaignCard 
-                  key={campaign.id} 
-                  campaign={campaign}
-                  className={`animate-fade-in stagger-${index + 1}`}
-                />
-              ))}
-            </div>
+            {campaigns.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {campaigns.map((campaign, index) => (
+                  <CampaignCard 
+                    key={campaign.id} 
+                    campaign={campaign}
+                    onUpdate={loadData}
+                    className={`animate-fade-in stagger-${index + 1}`}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="glass rounded-xl p-12 text-center">
+                <Send className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No campaigns yet</h3>
+                <p className="text-muted-foreground mb-4">Create your first outreach campaign</p>
+                <Button onClick={() => setShowCreateCampaign(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Campaign
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -288,6 +371,12 @@ export default function Index() {
         lead={selectedLead}
         open={!!selectedLead}
         onClose={() => setSelectedLead(null)}
+      />
+
+      <CreateCampaignDialog
+        open={showCreateCampaign}
+        onOpenChange={setShowCreateCampaign}
+        onCreated={handleCampaignCreated}
       />
     </div>
   );
