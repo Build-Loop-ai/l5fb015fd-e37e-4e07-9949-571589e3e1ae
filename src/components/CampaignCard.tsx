@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Campaign, updateCampaign, deleteCampaign } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, MoreHorizontal, Mail, MessageSquare, Trash2, Loader2, TrendingUp } from 'lucide-react';
+import { RingLoader } from '@/components/ui/visual-elements';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -67,13 +67,13 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
     : 0;
 
   return (
-    <div className={cn('glass rounded-2xl p-6 card-shadow hover:card-shadow-hover transition-all duration-300 group', className)}>
+    <div className={cn('glass rounded-2xl p-7 card-shadow hover:shadow-elevated transition-all duration-500 group', className)}>
       {/* Header */}
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex items-start justify-between mb-6">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-lg text-foreground truncate">{campaign.name}</h3>
+          <h3 className="font-semibold text-xl text-foreground truncate">{campaign.name}</h3>
           {campaign.created_at && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1.5">
               Created {new Date(campaign.created_at).toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric',
@@ -82,24 +82,30 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className={cn('border', status.color)}>{status.label}</Badge>
+        <div className="flex items-center gap-3">
+          <Badge className={cn('border font-medium', status.color)}>{status.label}</Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9" disabled={isUpdating}>
-                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" disabled={isUpdating}>
+                {isUpdating ? (
+                  <RingLoader className="w-4 h-4" />
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    <div className="w-1 h-1 rounded-full bg-current" />
+                    <div className="w-1 h-1 rounded-full bg-current" />
+                    <div className="w-1 h-1 rounded-full bg-current" />
+                  </div>
+                )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="glass-strong border-border/80">
+            <DropdownMenuContent align="end" className="glass-strong border-border/80 w-48">
               {campaign.status !== 'active' && (
                 <DropdownMenuItem onClick={() => handleStatusChange('active')}>
-                  <Play className="w-4 h-4 mr-2" />
                   Activate
                 </DropdownMenuItem>
               )}
               {campaign.status === 'active' && (
                 <DropdownMenuItem onClick={() => handleStatusChange('paused')}>
-                  <Pause className="w-4 h-4 mr-2" />
                   Pause
                 </DropdownMenuItem>
               )}
@@ -107,7 +113,6 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
                 Mark Complete
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -117,26 +122,17 @@ export function CampaignCard({ campaign, onUpdate, className }: CampaignCardProp
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="text-center p-3 rounded-xl bg-muted/30 border border-border/30">
-          <div className="flex items-center justify-center text-muted-foreground mb-2">
-            <Mail className="w-4 h-4" />
-          </div>
-          <div className="text-xl font-bold text-foreground">{campaign.sent_count || 0}</div>
-          <div className="text-xs text-muted-foreground font-medium">Sent</div>
+        <div className="text-center p-4 rounded-xl bg-muted/20 border border-border/30">
+          <div className="text-2xl font-bold text-foreground">{campaign.sent_count || 0}</div>
+          <div className="text-xs text-muted-foreground font-medium mt-1">Sent</div>
         </div>
-        <div className="text-center p-3 rounded-xl bg-muted/30 border border-border/30">
-          <div className="flex items-center justify-center text-muted-foreground mb-2">
-            <MessageSquare className="w-4 h-4" />
-          </div>
-          <div className="text-xl font-bold text-foreground">{campaign.reply_count || 0}</div>
-          <div className="text-xs text-muted-foreground font-medium">Replies</div>
+        <div className="text-center p-4 rounded-xl bg-muted/20 border border-border/30">
+          <div className="text-2xl font-bold text-foreground">{campaign.reply_count || 0}</div>
+          <div className="text-xs text-muted-foreground font-medium mt-1">Replies</div>
         </div>
-        <div className="text-center p-3 rounded-xl bg-muted/30 border border-border/30">
-          <div className="flex items-center justify-center text-muted-foreground mb-2">
-            <TrendingUp className="w-4 h-4" />
-          </div>
-          <div className="text-xl font-bold text-foreground">{replyRate}%</div>
-          <div className="text-xs text-muted-foreground font-medium">Rate</div>
+        <div className="text-center p-4 rounded-xl bg-muted/20 border border-border/30">
+          <div className="text-2xl font-bold text-foreground">{replyRate}%</div>
+          <div className="text-xs text-muted-foreground font-medium mt-1">Rate</div>
         </div>
       </div>
     </div>

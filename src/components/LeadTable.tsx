@@ -3,20 +3,6 @@ import { Lead } from '@/types/lead';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  Mail, 
-  Linkedin,
-  Phone,
-  ArrowUpDown,
-  Trash2,
-  ExternalLink,
-  CheckCircle2,
-  MessageSquare,
-  Star
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -77,9 +63,12 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
   return (
     <div className="glass-strong rounded-2xl overflow-hidden card-shadow">
       {/* Header */}
-      <div className="p-5 border-b border-border flex items-center gap-4">
-        <div className="search-input flex items-center gap-3 px-4 py-2.5 flex-1 max-w-md">
-          <Search className="w-4 h-4 text-muted-foreground" />
+      <div className="p-6 border-b border-border flex items-center gap-4">
+        <div className="search-input flex items-center gap-4 px-5 py-3 flex-1 max-w-md">
+          <div className="w-4 h-4 relative flex-shrink-0">
+            <div className="w-3 h-3 rounded-full border-2 border-muted-foreground" />
+            <div className="absolute bottom-0 right-0 w-1 h-1.5 bg-muted-foreground rounded-full rotate-45 origin-top" />
+          </div>
           <Input
             placeholder="Search leads..."
             value={searchQuery}
@@ -87,8 +76,7 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
             className="border-0 bg-transparent focus-visible:ring-0 px-0 h-auto"
           />
         </div>
-        <Button variant="outline" size="sm" className="rounded-lg">
-          <Filter className="w-4 h-4 mr-2" />
+        <Button variant="outline" size="sm" className="rounded-xl">
           Filters
         </Button>
       </div>
@@ -97,14 +85,14 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border bg-muted/20">
+            <tr className="border-b border-border bg-muted/10">
               <th className="text-left p-5 text-sm font-semibold text-muted-foreground">
                 <button 
                   onClick={() => handleSort('name')}
                   className="flex items-center gap-2 hover:text-foreground transition-colors"
                 >
                   Lead
-                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  <span className="text-[10px]">↕</span>
                 </button>
               </th>
               <th className="text-left p-5 text-sm font-semibold text-muted-foreground">Company</th>
@@ -115,7 +103,7 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
                   className="flex items-center gap-2 hover:text-foreground transition-colors"
                 >
                   Added
-                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  <span className="text-[10px]">↕</span>
                 </button>
               </th>
               <th className="text-left p-5 text-sm font-semibold text-muted-foreground">Contact</th>
@@ -125,8 +113,11 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
           <tbody>
             {filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-muted-foreground">
-                  <Search className="w-8 h-8 mx-auto mb-3 text-muted-foreground/50" />
+                <td colSpan={6} className="p-16 text-center text-muted-foreground">
+                  <div className="w-12 h-12 mx-auto mb-4 opacity-30">
+                    <div className="w-8 h-8 rounded-full border-2 border-muted-foreground mx-auto" />
+                    <div className="w-2.5 h-4 bg-muted-foreground rounded-full mx-auto -mt-1 rotate-45 origin-top" />
+                  </div>
                   <p className="font-medium">No leads found</p>
                   <p className="text-sm mt-1">Try adjusting your search</p>
                 </td>
@@ -172,27 +163,27 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
                     <td className="p-5">
                       <div className="flex items-center gap-1">
                         {lead.email && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" onClick={(e) => {
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={(e) => {
                             e.stopPropagation();
                             window.location.href = `mailto:${lead.email}`;
                           }}>
-                            <Mail className="w-4 h-4" />
+                            <span className="text-xs">@</span>
                           </Button>
                         )}
                         {lead.linkedin && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" onClick={(e) => {
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={(e) => {
                             e.stopPropagation();
                             window.open(lead.linkedin, '_blank');
                           }}>
-                            <Linkedin className="w-4 h-4" />
+                            <span className="text-xs font-bold">in</span>
                           </Button>
                         )}
                         {lead.phone && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" onClick={(e) => {
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={(e) => {
                             e.stopPropagation();
                             window.location.href = `tel:${lead.phone}`;
                           }}>
-                            <Phone className="w-4 h-4" />
+                            <span className="text-xs">☎</span>
                           </Button>
                         )}
                       </div>
@@ -200,8 +191,12 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
                     <td className="p-5 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
-                            <MoreHorizontal className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="w-1 h-1 rounded-full bg-current" />
+                              <div className="w-1 h-1 rounded-full bg-current" />
+                              <div className="w-1 h-1 rounded-full bg-current" />
+                            </div>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="glass-strong border-border/80 w-48">
@@ -210,7 +205,6 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
                               e.stopPropagation();
                               window.open(lead.linkedin, '_blank');
                             }}>
-                              <ExternalLink className="w-4 h-4 mr-2" />
                               View LinkedIn
                             </DropdownMenuItem>
                           )}
@@ -221,21 +215,18 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
                                 e.stopPropagation();
                                 onStatusChange(lead.id, 'contacted');
                               }}>
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
                                 Mark Contacted
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
                                 onStatusChange(lead.id, 'replied');
                               }}>
-                                <MessageSquare className="w-4 h-4 mr-2" />
                                 Mark Replied
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
                                 onStatusChange(lead.id, 'qualified');
                               }}>
-                                <Star className="w-4 h-4 mr-2" />
                                 Mark Qualified
                               </DropdownMenuItem>
                             </>
@@ -250,7 +241,6 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
                                   onDelete(lead.id);
                                 }}
                               >
-                                <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
                               </DropdownMenuItem>
                             </>
@@ -267,7 +257,7 @@ export function LeadTable({ leads, onLeadClick, onStatusChange, onDelete }: Lead
       </div>
 
       {/* Footer */}
-      <div className="p-5 border-t border-border flex items-center justify-between">
+      <div className="p-6 border-t border-border flex items-center justify-between">
         <p className="text-sm text-muted-foreground font-medium">
           Showing {filteredLeads.length} of {leads.length} leads
         </p>

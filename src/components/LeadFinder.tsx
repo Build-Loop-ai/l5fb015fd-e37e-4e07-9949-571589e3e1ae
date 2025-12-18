@@ -1,14 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Search, 
-  Sparkles,
-  Loader2,
-  UserPlus,
-  ArrowRight,
-  Wand2
-} from 'lucide-react';
+import { SparkBurst, RingLoader, AbstractBlob } from '@/components/ui/visual-elements';
 import { searchLeadsWithExa, saveLeads, Lead } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { LeadResultCard } from './LeadResultCard';
@@ -135,75 +128,87 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Hero Section */}
-      <div className="text-center mb-10 animate-fade-in">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 mb-6 animate-pulse-glow border border-primary/30">
-          <Wand2 className="w-10 h-10 text-primary animate-float" />
+      <div className="text-center mb-12 animate-fade-in">
+        <div className="relative inline-block mb-8">
+          <div className="absolute -inset-8 opacity-30">
+            <AbstractBlob className="w-full h-full animate-morph" />
+          </div>
+          <div className="relative visual-badge visual-badge-lg animate-pulse-glow">
+            <SparkBurst className="w-12 h-12" />
+          </div>
         </div>
-        <h2 className="text-3xl font-bold text-foreground mb-3 tracking-tight">Find Your Ideal Leads</h2>
-        <p className="text-muted-foreground text-lg max-w-md mx-auto">
-          Describe who you're looking for in plain English and let AI find them
+        <h2 className="text-4xl font-bold text-foreground mb-4 tracking-tight">Find Your Ideal Leads</h2>
+        <p className="text-muted-foreground text-xl max-w-md mx-auto">
+          Describe who you're looking for and let AI find them
         </p>
       </div>
 
       {/* Search Box */}
-      <div className="glass-strong rounded-3xl p-8 card-shadow mb-8 animate-fade-in stagger-2">
-        <div className="search-input flex items-center gap-3 px-5 py-4">
-          <Search className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          <Input
-            placeholder="e.g. VPs of Engineering at SaaS companies in San Francisco"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="border-0 bg-transparent text-lg placeholder:text-muted-foreground/70 focus-visible:ring-0 px-0"
-          />
+      <div className="glass-strong rounded-3xl p-10 card-shadow mb-10 animate-fade-in stagger-2 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-20 -translate-y-1/2 translate-x-1/2">
+          <AbstractBlob className="w-full h-full" />
         </div>
-
-        {/* Suggestions */}
-        <div className="mt-5">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Try these examples</p>
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => setQuery(suggestion)}
-                className="text-sm px-4 py-2 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-200 border border-transparent hover:border-border"
-              >
-                {suggestion}
-              </button>
-            ))}
+        
+        <div className="relative">
+          <div className="search-input flex items-center gap-4 px-6 py-5">
+            <div className="w-5 h-5 relative flex-shrink-0">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-muted-foreground" />
+              </div>
+              <div className="absolute bottom-0 right-0 w-1.5 h-2 bg-muted-foreground rounded-full rotate-45 origin-top" />
+            </div>
+            <Input
+              placeholder="VPs of Engineering at SaaS companies in San Francisco..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="border-0 bg-transparent text-lg placeholder:text-muted-foreground/60 focus-visible:ring-0 px-0"
+            />
           </div>
-        </div>
 
-        <Button 
-          onClick={handleSearch} 
-          disabled={isSearching}
-          className="w-full mt-6 h-14 text-base font-semibold rounded-xl"
-          size="lg"
-        >
-          {isSearching ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Searching with AI...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5 mr-2" />
-              Find Leads
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </>
-          )}
-        </Button>
+          {/* Suggestions */}
+          <div className="mt-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-4">Try these</p>
+            <div className="flex flex-wrap gap-3">
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => setQuery(suggestion)}
+                  className="text-sm px-5 py-2.5 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-300 border border-transparent hover:border-border"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button 
+            onClick={handleSearch} 
+            disabled={isSearching}
+            className="w-full mt-8 h-16 text-base font-semibold rounded-2xl"
+            size="lg"
+          >
+            {isSearching ? (
+              <span className="flex items-center gap-3">
+                <RingLoader className="w-5 h-5" />
+                Searching with AI...
+              </span>
+            ) : (
+              'Find Leads →'
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Results */}
       {foundLeads.length > 0 && (
         <div className="animate-fade-in-up">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-xl font-semibold text-foreground">
+              <h3 className="text-2xl font-bold text-foreground">
                 Found {foundLeads.length} leads
               </h3>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1">
                 {selectedLeads.size} selected for import
               </p>
             </div>
@@ -213,11 +218,13 @@ export function LeadFinder({ onLeadsFound }: LeadFinderProps) {
               className="rounded-xl"
             >
               {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span className="flex items-center gap-2">
+                  <RingLoader className="w-4 h-4" />
+                  Saving...
+                </span>
               ) : (
-                <UserPlus className="w-4 h-4 mr-2" />
+                `Save ${selectedLeads.size} Leads`
               )}
-              Save {selectedLeads.size} Leads
             </Button>
           </div>
 
