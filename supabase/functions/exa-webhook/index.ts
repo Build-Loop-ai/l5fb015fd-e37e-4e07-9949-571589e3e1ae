@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-exa-signature',
 };
 
+const EXA_WEBSETS_BASE = 'https://api.exa.ai/websets/v0';
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -12,6 +14,7 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const EXA_API_KEY = Deno.env.get('EXA_API_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
@@ -30,15 +33,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Handle webset.item.enriched - individual lead is ready
-    if (eventType === 'webset.item.enriched') {
-      console.log('Processing enriched item for webset:', data.websetId);
+    // Handle webset.idle - search is complete, now batch fetch all items
+    if (eventType === 'webset.idle') {
+      const websetId = data.id || data.websetId;
+      console.log('Webset completed, fetching all items:', websetId);
       
       // Get the webset search record to find campaign_id
       const { data: searchRecord, error: searchError } = await supabase
         .from('webset_searches')
         .select('*')
-        .eq('webset_id', data.websetId)
+        .eq('webset_id', websetId)
         .maybeSingle();
 
       if (searchError) {
@@ -46,100 +50,106 @@ Deno.serve(async (req) => {
       }
 
       const campaignId = searchRecord?.campaign_id || null;
-      const item = data.item || data;
 
-      // Parse lead data from enriched item
-      const lead = parseLeadFromItem(item);
-      lead.campaign_id = campaignId;
+      // Fetch ALL items from the webset in one API call
+      const response = await fetch(`${EXA_WEBSETS_BASE}/websets/${websetId}?expand=items`, {
+        headers: {
+          'x-api-key': EXA_API_KEY,
+          'Accept': 'application/json',
+        },
+      });
 
-      console.log('Parsed lead:', JSON.stringify(lead, null, 2));
-
-      // VALIDATE: Only save leads with meaningful data
-      const hasValidName = lead.name && lead.name !== 'Unknown' && lead.name.trim().length > 0;
-      const hasLinkedIn = lead.linkedin_url && lead.linkedin_url.includes('linkedin.com');
-      const hasEmail = lead.email && lead.email.includes('@');
-
-      if (!hasValidName && !hasLinkedIn && !hasEmail) {
-        console.log('Skipping invalid lead - no name, linkedin, or email');
-        return new Response(JSON.stringify({ success: true, skipped: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch webset items:', response.status, errorText);
+        throw new Error(`Failed to fetch webset items: ${response.status}`);
       }
 
-      // ATOMIC UPSERT: Use database-level unique constraint to prevent duplicates
-      // The unique index leads_linkedin_campaign_unique handles race conditions
-      const { data: upsertedLead, error: upsertError } = await supabase
-        .from('leads')
-        .upsert(lead, { 
-          onConflict: 'linkedin_url,campaign_id',
-          ignoreDuplicates: false // Update on conflict
-        })
-        .select()
-        .single();
+      const webset = await response.json();
+      const items = webset.items || [];
       
-      if (upsertError) {
-        // If linkedin conflict fails, try email-based upsert
-        if (upsertError.code === '23505' && lead.email) {
-          console.log('LinkedIn conflict, trying email-based upsert');
-          const { error: emailUpsertError } = await supabase
-            .from('leads')
-            .upsert(lead, { 
-              onConflict: 'email,campaign_id',
-              ignoreDuplicates: true // Just skip if email also exists
-            });
-          
-          if (emailUpsertError) {
-            console.log('Lead already exists (both linkedin and email match), skipping');
+      console.log(`Fetched ${items.length} items from webset ${websetId}`);
+
+      let savedCount = 0;
+      let skippedCount = 0;
+
+      // Process each item with all enrichments complete
+      for (const item of items) {
+        const lead = parseLeadFromItem(item);
+        lead.campaign_id = campaignId;
+
+        console.log('Parsed lead:', JSON.stringify(lead, null, 2));
+
+        // VALIDATE: Only save leads with meaningful data
+        const hasValidName = lead.name && lead.name !== 'Unknown' && lead.name.trim().length > 0;
+        const hasLinkedIn = lead.linkedin_url && lead.linkedin_url.includes('linkedin.com');
+        const hasEmail = lead.email && lead.email.includes('@');
+
+        if (!hasValidName && !hasLinkedIn && !hasEmail) {
+          console.log('Skipping invalid lead - no name, linkedin, or email');
+          skippedCount++;
+          continue;
+        }
+
+        // ATOMIC UPSERT: Use database-level unique constraint to prevent duplicates
+        const { error: upsertError } = await supabase
+          .from('leads')
+          .upsert(lead, { 
+            onConflict: 'linkedin_url,campaign_id',
+            ignoreDuplicates: false // Update on conflict
+          });
+        
+        if (upsertError) {
+          // If linkedin conflict fails, try email-based upsert
+          if (upsertError.code === '23505' && lead.email) {
+            console.log('LinkedIn conflict, trying email-based upsert');
+            const { error: emailUpsertError } = await supabase
+              .from('leads')
+              .upsert(lead, { 
+                onConflict: 'email,campaign_id',
+                ignoreDuplicates: true
+              });
+            
+            if (emailUpsertError) {
+              console.log('Lead already exists, skipping:', lead.name);
+              skippedCount++;
+            } else {
+              console.log('Lead upserted via email:', lead.name);
+              savedCount++;
+            }
           } else {
-            console.log('Lead upserted via email:', lead.name);
+            console.error('Error upserting lead:', upsertError);
+            skippedCount++;
           }
         } else {
-          console.error('Error upserting lead:', upsertError);
-        }
-      } else {
-        console.log('Lead upserted:', lead.name, upsertedLead?.id);
-
-        // Update items_received count
-        if (searchRecord) {
-          await supabase
-            .from('webset_searches')
-            .update({ items_received: (searchRecord.items_received || 0) + 1 })
-            .eq('webset_id', data.websetId);
-        }
-
-        // Update campaign lead count
-        if (campaignId) {
-          const { count } = await supabase
-            .from('leads')
-            .select('id', { count: 'exact', head: true })
-            .eq('campaign_id', campaignId);
-
-          await supabase
-            .from('campaigns')
-            .update({ lead_count: count || 0 })
-            .eq('id', campaignId);
+          console.log('Lead upserted:', lead.name);
+          savedCount++;
         }
       }
-    }
 
-    // Handle webset.idle - search is complete
-    if (eventType === 'webset.idle') {
-      console.log('Webset completed:', data.id || data.websetId);
-      
-      const websetId = data.id || data.websetId;
-      
+      // Update search record
       await supabase
         .from('webset_searches')
-        .update({ status: 'completed' })
+        .update({ 
+          status: 'completed',
+          items_received: items.length
+        })
         .eq('webset_id', websetId);
 
-      console.log('Search marked as completed');
-    }
+      // Update campaign lead count
+      if (campaignId) {
+        const { count } = await supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('campaign_id', campaignId);
 
-    // Handle webset.item.created - item discovered but not yet enriched
-    if (eventType === 'webset.item.created') {
-      console.log('New item discovered for webset:', data.websetId);
-      // We'll wait for webset.item.enriched to save the lead with full data
+        await supabase
+          .from('campaigns')
+          .update({ lead_count: count || 0 })
+          .eq('id', campaignId);
+      }
+
+      console.log(`Webset ${websetId} complete: ${savedCount} saved, ${skippedCount} skipped`);
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -157,8 +167,9 @@ Deno.serve(async (req) => {
 
 function parseLeadFromItem(item: any): any {
   const enrichments = item.enrichments || [];
+  const properties = item.properties || {};
 
-  console.log('Raw enrichments:', JSON.stringify(enrichments, null, 2));
+  console.log('Raw item:', JSON.stringify({ id: item.id, properties, enrichments }, null, 2));
 
   // Helper to get result value from enrichment
   const getResult = (enrichment: any): string => {
@@ -177,6 +188,22 @@ function parseLeadFromItem(item: any): any {
   let location = '';
   let name = '';
 
+  // First try to get data from properties (structured data from Exa)
+  if (properties.type === 'person' && properties.person) {
+    name = properties.person.name || '';
+    location = properties.person.location || '';
+    title = properties.person.position || '';
+    if (properties.person.company) {
+      company = properties.person.company.name || '';
+    }
+  }
+
+  // Get URL from properties
+  if (properties.url && properties.url.includes('linkedin.com/in/')) {
+    linkedinUrl = properties.url;
+  }
+
+  // Then augment/override with enrichment data
   for (const enrichment of enrichments) {
     const val = getResult(enrichment).trim();
     if (!val) continue;
@@ -210,13 +237,15 @@ function parseLeadFromItem(item: any): any {
     linkedinUrl = item.url;
   }
 
-  // Extract name from enrichment references (best source)
-  for (const enrichment of enrichments) {
-    if (enrichment.references && enrichment.references.length > 0) {
-      const refTitle = enrichment.references[0].title || '';
-      if (refTitle && !refTitle.includes('linkedin.com') && refTitle.length < 50 && refTitle.length > 2) {
-        name = refTitle;
-        break;
+  // Extract name from enrichment references if not already found
+  if (!name) {
+    for (const enrichment of enrichments) {
+      if (enrichment.references && enrichment.references.length > 0) {
+        const refTitle = enrichment.references[0].title || '';
+        if (refTitle && !refTitle.includes('linkedin.com') && refTitle.length < 50 && refTitle.length > 2) {
+          name = refTitle;
+          break;
+        }
       }
     }
   }
@@ -251,7 +280,7 @@ function parseLeadFromItem(item: any): any {
     industry: null,
     status: 'new',
     profile_data: {
-      source: 'exa_websets_webhook',
+      source: 'exa_websets_batch',
       item_id: item.id,
       enrichments: enrichments,
     },
