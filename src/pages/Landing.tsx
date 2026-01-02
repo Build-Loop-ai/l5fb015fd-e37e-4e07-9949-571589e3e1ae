@@ -234,9 +234,9 @@ export default function Landing() {
           {/* Subtle top shine */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-t-2xl" />
           
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-3 pl-3">
+          <div className="flex items-center">
+            {/* Logo - fixed width for balance */}
+            <div className="flex items-center gap-3 pl-2 w-40">
               <div className="relative group">
                 <div className="absolute inset-0 rounded-xl bg-primary/40 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
@@ -246,8 +246,8 @@ export default function Landing() {
               <span className="text-lg font-semibold text-foreground tracking-tight">LeadFlow</span>
             </div>
             
-            {/* Center Nav Links */}
-            <div className="hidden md:flex items-center">
+            {/* Center Nav Links - flex-1 to take remaining space and center */}
+            <div className="hidden md:flex flex-1 items-center justify-center">
               <div className="flex items-center bg-white/[0.03] rounded-xl p-1">
                 {[
                   { label: 'Features', href: '#features' },
@@ -265,8 +265,8 @@ export default function Landing() {
               </div>
             </div>
             
-            {/* Right Actions */}
-            <div className="flex items-center gap-2 pr-1">
+            {/* Right Actions - fixed width for balance */}
+            <div className="flex items-center justify-end gap-2 pr-1 w-40">
               {user ? (
                 <button 
                   onClick={() => navigate('/dashboard')} 
