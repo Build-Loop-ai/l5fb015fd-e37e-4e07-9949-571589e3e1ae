@@ -93,39 +93,56 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // ATOMIC UPSERT: Use database-level unique constraint to prevent duplicates
-        const { error: upsertError } = await supabase
-          .from('leads')
-          .upsert(lead, { 
-            onConflict: 'linkedin_url,campaign_id',
-            ignoreDuplicates: false // Update on conflict
-          });
+        // Try to find existing lead by linkedin_url or email within the same campaign
+        let existingLead = null;
         
-        if (upsertError) {
-          // If linkedin conflict fails, try email-based upsert
-          if (upsertError.code === '23505' && lead.email) {
-            console.log('LinkedIn conflict, trying email-based upsert');
-            const { error: emailUpsertError } = await supabase
-              .from('leads')
-              .upsert(lead, { 
-                onConflict: 'email,campaign_id',
-                ignoreDuplicates: true
-              });
-            
-            if (emailUpsertError) {
-              console.log('Lead already exists, skipping:', lead.name);
-              skippedCount++;
-            } else {
-              console.log('Lead upserted via email:', lead.name);
-              savedCount++;
-            }
-          } else {
-            console.error('Error upserting lead:', upsertError);
+        if (lead.linkedin_url && campaignId) {
+          const { data } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('linkedin_url', lead.linkedin_url)
+            .eq('campaign_id', campaignId)
+            .maybeSingle();
+          existingLead = data;
+        }
+        
+        if (!existingLead && lead.email && campaignId) {
+          const { data } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('email', lead.email)
+            .eq('campaign_id', campaignId)
+            .maybeSingle();
+          existingLead = data;
+        }
+
+        if (existingLead) {
+          // Update existing lead
+          const { error: updateError } = await supabase
+            .from('leads')
+            .update(lead)
+            .eq('id', existingLead.id);
+          
+          if (updateError) {
+            console.error('Error updating lead:', updateError);
             skippedCount++;
+          } else {
+            console.log('Lead updated:', lead.name);
+            savedCount++;
           }
         } else {
-          console.log('Lead upserted:', lead.name);
-          savedCount++;
+          // Insert new lead
+          const { error: insertError } = await supabase
+            .from('leads')
+            .insert(lead);
+          
+          if (insertError) {
+            console.error('Error inserting lead:', insertError);
+            skippedCount++;
+          } else {
+            console.log('Lead inserted:', lead.name);
+            savedCount++;
+          }
         }
       }
 
