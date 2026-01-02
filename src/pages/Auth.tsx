@@ -26,7 +26,7 @@ export default function Auth() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -68,7 +68,7 @@ export default function Auth() {
             title: 'Welcome back!',
             description: 'You have been signed in successfully.',
           });
-          navigate('/');
+          navigate('/dashboard');
         }
       } else {
         const { error } = await signUp(email, password, fullName);
@@ -89,9 +89,9 @@ export default function Auth() {
         } else {
           toast({
             title: 'Account created!',
-            description: 'Welcome to LeadPulse. You are now signed in.',
+            description: 'Welcome to LeadFlow. You are now signed in.',
           });
-          navigate('/');
+          navigate('/dashboard');
         }
       }
     } catch (err) {

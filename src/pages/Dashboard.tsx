@@ -49,13 +49,13 @@ export default function Index() {
       });
       refreshSubscription();
       // Clean up URL
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } else if (checkout === 'canceled') {
       toast({
         title: 'Checkout canceled',
         description: 'You can upgrade anytime from Settings.',
       });
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [searchParams, toast, refreshSubscription, navigate]);
 
