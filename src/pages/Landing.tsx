@@ -379,41 +379,51 @@ export default function Landing() {
         </div>
       </section>
       
-      {/* Transition to light */}
-      <div className="h-32 bg-gradient-to-b from-background via-neutral-200/50 to-white" />
+      {/* Wave divider - top */}
+      <div className="relative h-24 bg-background">
+        <svg className="absolute bottom-0 w-full h-24" viewBox="0 0 1440 96" preserveAspectRatio="none" fill="none">
+          <path d="M0,96 L0,40 Q360,0 720,40 T1440,40 L1440,96 Z" fill="white" />
+        </svg>
+      </div>
       
       {/* How it Works Section - Light theme */}
-      <section id="how-it-works" className="py-24 px-6 relative bg-white">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_hsl(330_100%_60%_/_0.06)_0%,_transparent_50%)]" />
+      <section id="how-it-works" className="py-24 px-6 relative bg-white overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-primary/3 to-transparent rounded-full" />
         
         <div className="max-w-4xl mx-auto relative z-10">
           <AnimatedSection className="text-center mb-16">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+              Simple Process
+            </span>
             <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
               How it works
             </h2>
-            <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
+            <p className="text-xl text-neutral-500 max-w-2xl mx-auto">
               From idea to outreach in minutes, not hours.
             </p>
           </AnimatedSection>
           
-          <div className="space-y-12">
+          <div className="space-y-8">
             {steps.map((step, i) => (
               <motion.div
                 key={step.title}
-                initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.6, delay: i * 0.15, ease: [0.22, 1, 0.36, 1] }}
-                className="flex gap-6 items-start"
+                transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                className="flex gap-6 items-start p-6 rounded-2xl bg-neutral-50/80 border border-neutral-100 hover:bg-white hover:shadow-xl hover:shadow-neutral-200/50 transition-all duration-300"
               >
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-lg font-bold text-primary shadow-sm">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-primary/25">
                     {i + 1}
                   </div>
                 </div>
-                <div className="pt-1">
-                  <h3 className="text-lg font-semibold text-neutral-900 mb-1.5">{step.title}</h3>
-                  <p className="text-neutral-600 text-sm leading-relaxed">{step.description}</p>
+                <div className="pt-2">
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">{step.title}</h3>
+                  <p className="text-neutral-500 text-sm leading-relaxed">{step.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -421,8 +431,12 @@ export default function Landing() {
         </div>
       </section>
       
-      {/* Transition back to dark */}
-      <div className="h-32 bg-gradient-to-b from-white via-neutral-200/50 to-background" />
+      {/* Wave divider - bottom */}
+      <div className="relative h-24 bg-background">
+        <svg className="absolute top-0 w-full h-24" viewBox="0 0 1440 96" preserveAspectRatio="none" fill="none">
+          <path d="M0,0 L0,56 Q360,96 720,56 T1440,56 L1440,0 Z" fill="white" />
+        </svg>
+      </div>
       
       {/* Pricing Section */}
       <section id="pricing" className="py-24 px-6">
