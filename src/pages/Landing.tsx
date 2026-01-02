@@ -150,12 +150,12 @@ function PricingCard({ name, price, leads, features, popular, index }: { name: s
           ))}
         </ul>
         
-        <Button 
+        <button 
           onClick={() => navigate('/auth')}
-          className={`w-full h-12 rounded-xl font-medium ${popular ? 'apple-button' : 'bg-secondary/80 hover:bg-secondary text-foreground border border-border/50'}`}
+          className={`w-full h-12 rounded-xl font-semibold text-sm ${popular ? 'apple-button' : 'apple-button-secondary'}`}
         >
           Get Started
-        </Button>
+        </button>
       </div>
     </motion.div>
   );
