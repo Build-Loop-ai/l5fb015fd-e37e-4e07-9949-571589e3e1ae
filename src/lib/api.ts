@@ -13,6 +13,7 @@ export interface Lead {
   profile_data?: any;
   status?: string;
   campaign_id?: string;
+  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -26,6 +27,7 @@ export interface Campaign {
   reply_count?: number;
   search_query?: string;
   lead_count?: number;
+  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -82,9 +84,16 @@ export async function generateOutreach(params: {
 }
 
 export async function saveLeads(leads: Lead[], campaignId?: string): Promise<{ success: boolean; error?: string }> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'User not authenticated' };
+  }
+
   const leadsWithCampaign = leads.map(lead => ({
     ...lead,
     campaign_id: campaignId || null,
+    user_id: user.id,
   }));
 
   const { error } = await supabase.from('leads').insert(leadsWithCampaign);
@@ -336,10 +345,16 @@ export async function getCampaignById(campaignId: string): Promise<{ success: bo
   return { success: true, campaign: data || undefined };
 }
 
-export async function createCampaign(campaign: Omit<Campaign, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; campaign?: Campaign; error?: string }> {
+export async function createCampaign(campaign: Omit<Campaign, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<{ success: boolean; campaign?: Campaign; error?: string }> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'User not authenticated' };
+  }
+
   const { data, error } = await supabase
     .from('campaigns')
-    .insert(campaign)
+    .insert({ ...campaign, user_id: user.id })
     .select()
     .single();
 
