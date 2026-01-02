@@ -66,17 +66,17 @@ function FeatureCard({ visual: Visual, title, description, index }: { visual: Re
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
       transition={{ duration: 0.6, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -8, transition: { duration: 0.3 } }}
-      className="group relative p-8 rounded-3xl border border-border/50 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-xl overflow-hidden"
+      className="group relative p-8 rounded-3xl border border-border/50 bg-card/60 backdrop-blur-xl overflow-hidden"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       
       <div className="relative z-10">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-          <Visual className="w-8 h-8" />
+        <div className="w-14 h-14 rounded-2xl bg-background border border-border/80 flex items-center justify-center mb-6 group-hover:border-primary/40 group-hover:shadow-lg group-hover:shadow-primary/10 transition-all duration-300">
+          <Visual className="w-7 h-7" />
         </div>
-        <h3 className="text-xl font-semibold text-foreground mb-3">{title}</h3>
-        <p className="text-muted-foreground leading-relaxed">{description}</p>
+        <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
       </div>
     </motion.div>
   );
@@ -114,43 +114,49 @@ function PricingCard({ name, price, leads, features, popular, index }: { name: s
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
       transition={{ duration: 0.6, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -8 }}
-      className={`relative p-8 rounded-3xl border ${popular ? 'border-primary/50 bg-gradient-to-b from-primary/10 to-card/80' : 'border-border/50 bg-card/60'} backdrop-blur-xl overflow-hidden`}
+      className={`relative p-8 rounded-3xl border ${popular ? 'border-primary bg-gradient-to-b from-primary/10 via-card/90 to-card/80 shadow-xl shadow-primary/10' : 'border-border/50 bg-card/60'} backdrop-blur-xl`}
     >
       {popular && (
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
       )}
       {popular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="px-4 py-1 rounded-full text-xs font-semibold bg-primary text-primary-foreground">
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
+          <span className="px-4 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground whitespace-nowrap shadow-lg shadow-primary/30">
             Most Popular
           </span>
         </div>
       )}
       
-      <div className="mb-6">
-        <h3 className="text-xl font-semibold text-foreground mb-2">{name}</h3>
-        <div className="flex items-baseline gap-1">
-          <span className="text-4xl font-bold text-foreground">{price}</span>
-          <span className="text-muted-foreground">/month</span>
+      <div className={`${popular ? 'pt-2' : ''}`}>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-foreground mb-2">{name}</h3>
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl font-bold text-foreground">{price}</span>
+            <span className="text-muted-foreground text-sm">/month</span>
+          </div>
+          <p className="text-primary mt-2 text-sm font-medium">{leads} leads/month</p>
         </div>
-        <p className="text-primary mt-2 font-medium">{leads} leads/month</p>
+        
+        <ul className="space-y-3 mb-8">
+          {features.map((feature, i) => (
+            <li key={i} className="flex items-start gap-3 text-muted-foreground text-sm">
+              <div className="w-5 h-5 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg className="w-3 h-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+        
+        <Button 
+          onClick={() => navigate('/auth')}
+          className={`w-full h-12 rounded-xl font-medium ${popular ? 'apple-button' : 'bg-secondary/80 hover:bg-secondary text-foreground border border-border/50'}`}
+        >
+          Get Started
+        </Button>
       </div>
-      
-      <ul className="space-y-3 mb-8">
-        {features.map((feature, i) => (
-          <li key={i} className="flex items-center gap-3 text-muted-foreground">
-            <GlowDot className="w-2 h-2 flex-shrink-0" color="primary" />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-      
-      <Button 
-        onClick={() => navigate('/auth')}
-        className={`w-full h-12 rounded-xl font-medium ${popular ? 'apple-button' : 'bg-secondary hover:bg-secondary/80'}`}
-      >
-        Get Started
-      </Button>
     </motion.div>
   );
 }
@@ -166,16 +172,16 @@ function StepItem({ number, title, description, index }: { number: number; title
       initial={{ opacity: 0, x: index % 2 === 0 ? -40 : 40 }}
       animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: index % 2 === 0 ? -40 : 40 }}
       transition={{ duration: 0.6, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
-      className="flex gap-6"
+      className="flex gap-6 items-start"
     >
       <div className="flex-shrink-0">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xl font-bold text-primary-foreground shadow-lg shadow-primary/30">
+        <div className="w-12 h-12 rounded-xl bg-background border border-border/80 flex items-center justify-center text-lg font-bold text-primary">
           {number}
         </div>
       </div>
-      <div>
-        <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
-        <p className="text-muted-foreground leading-relaxed">{description}</p>
+      <div className="pt-1">
+        <h3 className="text-lg font-semibold text-foreground mb-1.5">{title}</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
       </div>
     </motion.div>
   );
@@ -225,11 +231,11 @@ export default function Landing() {
         className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-background/50 backdrop-blur-xl border-b border-border/30"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30">
-              <PulseOrb className="w-5 h-5" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+              <div className="w-4 h-4 rounded-full bg-primary-foreground/90" />
             </div>
-            <span className="text-xl font-semibold text-foreground">LeadFlow</span>
+            <span className="text-lg font-semibold text-foreground tracking-tight">LeadFlow</span>
           </div>
           
           <div className="hidden md:flex items-center gap-8">
@@ -240,18 +246,16 @@ export default function Landing() {
           
           <div className="flex items-center gap-3">
             {user ? (
-              <Button onClick={() => navigate('/dashboard')} className="apple-button gap-2">
+              <Button onClick={() => navigate('/dashboard')} className="apple-button h-9 px-4 text-sm">
                 Dashboard
-                <DiamondShape className="w-4 h-4" />
               </Button>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => navigate('/auth')} className="text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" onClick={() => navigate('/auth')} className="text-muted-foreground hover:text-foreground h-9">
                   Sign In
                 </Button>
-                <Button onClick={() => navigate('/auth')} className="apple-button gap-2">
+                <Button onClick={() => navigate('/auth')} className="apple-button h-9 px-4 text-sm">
                   Get Started
-                  <DiamondShape className="w-3 h-3" />
                 </Button>
               </>
             )}
@@ -279,9 +283,9 @@ export default function Landing() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
-              <SparkBurst className="w-4 h-4" />
-              AI-Powered Lead Generation
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-card/80 border border-border/50 text-sm font-medium mb-8 backdrop-blur-sm">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="text-muted-foreground">AI-Powered Lead Generation</span>
             </div>
           </motion.div>
           
@@ -311,12 +315,17 @@ export default function Landing() {
             transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Button onClick={() => navigate('/auth')} size="lg" className="apple-button h-14 px-8 text-lg gap-3">
+            <Button onClick={() => navigate('/auth')} size="lg" className="apple-button h-14 px-8 text-lg gap-2">
               Start Finding Leads
-              <DiamondShape className="w-4 h-4" />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
             </Button>
             <Button variant="ghost" size="lg" className="h-14 px-8 text-lg text-muted-foreground hover:text-foreground gap-2">
-              <ChatBubbles className="w-5 h-5" />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
+              </svg>
               Watch Demo
             </Button>
           </motion.div>
@@ -429,21 +438,23 @@ export default function Landing() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_hsl(var(--primary)_/_0.1)_0%,_transparent_60%)]" />
         
         <AnimatedSection className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 mb-8">
-            <PulseOrb className="w-10 h-10" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-card border border-border/50 mb-8">
+            <div className="w-8 h-8 rounded-full bg-primary shadow-lg shadow-primary/30" />
           </div>
           
-          <h2 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
             Ready to transform
             <br />
             <span className="gradient-text">your outreach?</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-xl mx-auto mb-10">
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
             Join thousands of sales teams already using LeadFlow to find and convert their ideal customers.
           </p>
-          <Button onClick={() => navigate('/auth')} size="lg" className="apple-button h-16 px-10 text-lg gap-3">
+          <Button onClick={() => navigate('/auth')} size="lg" className="apple-button h-14 px-10 text-lg gap-2">
             Start Your Free Trial
-            <DiamondShape className="w-4 h-4" />
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
           </Button>
         </AnimatedSection>
       </section>
@@ -451,11 +462,11 @@ export default function Landing() {
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-border/30">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-              <PulseOrb className="w-4 h-4" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
+              <div className="w-3 h-3 rounded-full bg-primary-foreground/90" />
             </div>
-            <span className="font-semibold text-foreground">LeadFlow</span>
+            <span className="font-medium text-foreground">LeadFlow</span>
           </div>
           
           <div className="flex items-center gap-8 text-sm text-muted-foreground">
