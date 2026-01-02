@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       // Get the webset search record to find campaign_id
       const { data: searchRecord, error: searchError } = await supabase
         .from('webset_searches')
-        .select('*')
+        .select('*, campaigns(user_id)')
         .eq('webset_id', websetId)
         .maybeSingle();
 
@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
       }
 
       const campaignId = searchRecord?.campaign_id || null;
+      const userId = (searchRecord?.campaigns as any)?.user_id || null;
 
       // Fetch ALL items from the webset in one API call
       const response = await fetch(`${EXA_WEBSETS_BASE}/websets/${websetId}?expand=items`, {
@@ -77,6 +78,7 @@ Deno.serve(async (req) => {
       for (const item of items) {
         const lead = parseLeadFromItem(item);
         lead.campaign_id = campaignId;
+        lead.user_id = userId;
 
         console.log('Parsed lead:', JSON.stringify(lead, null, 2));
 
