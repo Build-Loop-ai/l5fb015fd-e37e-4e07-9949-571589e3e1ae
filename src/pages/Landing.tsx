@@ -228,68 +228,70 @@ export default function Landing() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl"
+        className="fixed top-4 inset-x-0 z-50 px-4"
       >
-        <div className="relative px-2 py-2 rounded-2xl bg-background/60 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.03)]">
-          {/* Subtle top shine */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-t-2xl" />
-          
-          <div className="flex items-center">
-            {/* Logo - fixed width for balance */}
-            <div className="flex items-center gap-3 pl-2 w-40">
-              <div className="relative group">
-                <div className="absolute inset-0 rounded-xl bg-primary/40 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
-                  <div className="w-4 h-4 rounded-full bg-white/90 shadow-inner" />
+        <div className="mx-auto max-w-5xl">
+          <div className="relative px-2 py-2 rounded-2xl bg-background/60 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.03)]">
+            {/* Subtle top shine */}
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-t-2xl" />
+            
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+              {/* Left: Logo */}
+              <div className="flex items-center gap-3 pl-2 justify-start min-w-0">
+                <div className="relative group flex-shrink-0">
+                  <div className="absolute inset-0 rounded-xl bg-primary/40 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
+                    <div className="w-4 h-4 rounded-full bg-white/90 shadow-inner" />
+                  </div>
+                </div>
+                <span className="text-lg font-semibold text-foreground tracking-tight truncate">LeadFlow</span>
+              </div>
+              
+              {/* Center: Nav Links (always centered) */}
+              <div className="hidden md:flex items-center justify-center">
+                <div className="flex items-center bg-white/[0.03] rounded-xl p-1">
+                  {[
+                    { label: 'Features', href: '#features' },
+                    { label: 'How it Works', href: '#how-it-works' },
+                    { label: 'Pricing', href: '#pricing' },
+                  ].map((link) => (
+                    <a
+                      key={link.label}
+                      href={link.href}
+                      className="relative px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-white/[0.04]"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
                 </div>
               </div>
-              <span className="text-lg font-semibold text-foreground tracking-tight">LeadFlow</span>
-            </div>
-            
-            {/* Center Nav Links - flex-1 to take remaining space and center */}
-            <div className="hidden md:flex flex-1 items-center justify-center">
-              <div className="flex items-center bg-white/[0.03] rounded-xl p-1">
-                {[
-                  { label: 'Features', href: '#features' },
-                  { label: 'How it Works', href: '#how-it-works' },
-                  { label: 'Pricing', href: '#pricing' },
-                ].map((link) => (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    className="relative px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-white/[0.04]"
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-            
-            {/* Right Actions - fixed width for balance */}
-            <div className="flex items-center justify-end gap-2 pr-1 w-40">
-              {user ? (
-                <button 
-                  onClick={() => navigate('/dashboard')} 
-                  className="h-9 px-5 rounded-xl text-sm font-medium bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-[0_2px_8px_rgba(255,45,146,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] hover:shadow-[0_4px_16px_rgba(255,45,146,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  Dashboard
-                </button>
-              ) : (
-                <>
+              
+              {/* Right: Actions */}
+              <div className="flex items-center justify-end gap-2 pr-1">
+                {user ? (
                   <button 
-                    onClick={() => navigate('/auth')} 
-                    className="hidden sm:flex h-9 px-4 items-center text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
-                  >
-                    Sign In
-                  </button>
-                  <button 
-                    onClick={() => navigate('/auth')} 
+                    onClick={() => navigate('/dashboard')} 
                     className="h-9 px-5 rounded-xl text-sm font-medium bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-[0_2px_8px_rgba(255,45,146,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] hover:shadow-[0_4px_16px_rgba(255,45,146,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-all duration-300 hover:-translate-y-0.5"
                   >
-                    Get Started
+                    Dashboard
                   </button>
-                </>
-              )}
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => navigate('/auth')} 
+                      className="hidden sm:flex h-9 px-4 items-center text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+                    >
+                      Sign In
+                    </button>
+                    <button 
+                      onClick={() => navigate('/auth')} 
+                      className="h-9 px-5 rounded-xl text-sm font-medium bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-[0_2px_8px_rgba(255,45,146,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] hover:shadow-[0_4px_16px_rgba(255,45,146,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-all duration-300 hover:-translate-y-0.5"
+                    >
+                      Get Started
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
