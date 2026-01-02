@@ -6,6 +6,9 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { GlowDot, AbstractBlob } from '@/components/ui/visual-elements';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { PricingPlans } from '@/components/PricingPlans';
+import { PLANS, PlanId } from '@/lib/plans';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,9 +20,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-
-const CREDITS_PER_LEAD = 1;
-const MAX_CREDITS = 5000;
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface SettingsSectionProps {
   title: string;
@@ -60,10 +66,14 @@ function SettingRow({ label, description, children }: SettingRowProps) {
 
 export function SettingsPage() {
   const { toast } = useToast();
+  const { user, subscription, subscriptionLoading, refreshSubscription, session } = useAuth();
+  const [showPricing, setShowPricing] = useState(false);
+  const [managingBilling, setManagingBilling] = useState(false);
+  
   const [profile, setProfile] = useState({
-    name: 'User',
-    email: 'user@example.com',
-    company: 'Acme Inc.',
+    name: user?.user_metadata?.full_name || 'User',
+    email: user?.email || 'user@example.com',
+    company: '',
   });
   
   const [notifications, setNotifications] = useState({
@@ -101,8 +111,20 @@ export function SettingsPage() {
     fetchUsageStats();
   }, []);
 
-  const creditsUsed = usageStats.leadsCount * CREDITS_PER_LEAD;
-  const creditsPercentage = Math.min((creditsUsed / MAX_CREDITS) * 100, 100);
+  useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        name: user.user_metadata?.full_name || prev.name,
+        email: user.email || prev.email,
+      }));
+    }
+  }, [user]);
+
+  const currentPlan = PLANS[subscription?.plan_id as PlanId] || PLANS.free;
+  const creditsUsed = subscription?.credits_used || 0;
+  const creditsLimit = subscription?.credits_limit || currentPlan.credits;
+  const creditsPercentage = Math.min((creditsUsed / creditsLimit) * 100, 100);
 
   const handleSaveProfile = () => {
     toast({
@@ -118,6 +140,30 @@ export function SettingsPage() {
     });
   };
 
+  const handleManageBilling = async () => {
+    setManagingBilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to open billing portal',
+        variant: 'destructive',
+      });
+    } finally {
+      setManagingBilling(false);
+    }
+  };
+
   const handleDeleteAllData = () => {
     toast({
       title: 'Data deletion requested',
@@ -130,7 +176,7 @@ export function SettingsPage() {
     <div className="animate-fade-in">
       <div className="page-header">
         <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Manage your account, preferences, and integrations</p>
+        <p className="page-subtitle">Manage your account, preferences, and subscription</p>
       </div>
 
       <div className="max-w-3xl space-y-8">
@@ -183,8 +229,8 @@ export function SettingsPage() {
                 id="email"
                 type="email"
                 value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                className="apple-input"
+                disabled
+                className="apple-input opacity-60"
               />
             </div>
 
@@ -196,6 +242,113 @@ export function SettingsPage() {
           </div>
         </SettingsSection>
 
+        {/* Plan & Usage */}
+        <SettingsSection 
+          title="Plan & Usage" 
+          description="Your current subscription and credit usage"
+          className="animate-fade-in stagger-2"
+        >
+          <div className="relative overflow-hidden">
+            <div className="absolute -top-16 -right-16 w-32 h-32 opacity-20">
+              <AbstractBlob className="w-full h-full" />
+            </div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xl font-bold text-foreground">
+                    {subscriptionLoading ? '...' : currentPlan.name} Plan
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {subscription?.subscribed ? 'Billed monthly' : 'Free tier'}
+                  </p>
+                </div>
+                <span className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${
+                  subscription?.subscribed 
+                    ? 'bg-primary/10 text-primary border-primary/20' 
+                    : 'bg-muted text-muted-foreground border-border'
+                }`}>
+                  {subscription?.subscribed ? 'ACTIVE' : 'FREE'}
+                </span>
+              </div>
+
+              <div className="space-y-4 mt-6">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Credits Used</span>
+                    <span className="text-foreground font-medium">
+                      {subscriptionLoading 
+                        ? '...' 
+                        : `${creditsUsed.toLocaleString()} / ${creditsLimit.toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${creditsPercentage}%`,
+                        background: creditsPercentage > 90 
+                          ? 'hsl(0 72% 55%)' 
+                          : 'linear-gradient(90deg, hsl(330 100% 63%), hsl(350 90% 65%), hsl(15 95% 60%))'
+                      }} 
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {creditsLimit - creditsUsed} credits remaining this month
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 pt-4">
+                  <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
+                    <p className="text-2xl font-bold text-foreground">
+                      {usageStats.isLoading ? '...' : usageStats.campaignsCount}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Campaigns</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
+                    <p className="text-2xl font-bold text-foreground">
+                      {usageStats.isLoading ? '...' : usageStats.leadsCount.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Leads Found</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
+                    <p className="text-2xl font-bold text-foreground">
+                      ${currentPlan.price}
+                    </p>
+                    <p className="text-xs text-muted-foreground">/month</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 flex gap-3">
+                <Button onClick={() => setShowPricing(true)} className="rounded-xl">
+                  {subscription?.subscribed ? 'Change Plan' : 'Upgrade Plan'}
+                </Button>
+                {subscription?.subscribed && (
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl"
+                    onClick={handleManageBilling}
+                    disabled={managingBilling}
+                  >
+                    {managingBilling ? (
+                      <div className="apple-spinner w-4 h-4" />
+                    ) : (
+                      'Manage Billing'
+                    )}
+                  </Button>
+                )}
+                <Button 
+                  variant="ghost" 
+                  className="rounded-xl"
+                  onClick={refreshSubscription}
+                  disabled={subscriptionLoading}
+                >
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </div>
+        </SettingsSection>
 
         {/* Notifications Section */}
         <SettingsSection 
@@ -260,85 +413,11 @@ export function SettingsPage() {
           </div>
         </SettingsSection>
 
-        {/* Plan & Usage */}
-        <SettingsSection 
-          title="Plan & Usage" 
-          description="Your current plan and usage statistics"
-          className="animate-fade-in stagger-4"
-        >
-          <div className="relative overflow-hidden">
-            <div className="absolute -top-16 -right-16 w-32 h-32 opacity-20">
-              <AbstractBlob className="w-full h-full" />
-            </div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-xl font-bold text-foreground">Pro Plan</p>
-                  <p className="text-sm text-muted-foreground">Billed monthly</p>
-                </div>
-                <span className="px-4 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                  ACTIVE
-                </span>
-              </div>
-
-              <div className="space-y-4 mt-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Credits Used</span>
-                    <span className="text-foreground font-medium">
-                      {usageStats.isLoading ? '...' : `${creditsUsed.toLocaleString()} / ${MAX_CREDITS.toLocaleString()}`}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${creditsPercentage}%`,
-                        background: 'linear-gradient(90deg, hsl(330 100% 63%), hsl(350 90% 65%), hsl(15 95% 60%))'
-                      }} 
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {CREDITS_PER_LEAD} credit per lead found
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4 pt-4">
-                  <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
-                    <p className="text-2xl font-bold text-foreground">
-                      {usageStats.isLoading ? '...' : usageStats.campaignsCount}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Campaigns</p>
-                  </div>
-                  <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
-                    <p className="text-2xl font-bold text-foreground">
-                      {usageStats.isLoading ? '...' : usageStats.leadsCount.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Leads Found</p>
-                  </div>
-                  <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
-                    <p className="text-2xl font-bold text-foreground">
-                      {usageStats.isLoading ? '...' : (MAX_CREDITS - creditsUsed).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Remaining</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-6">
-                <Button variant="outline" className="rounded-xl">
-                  Upgrade Plan
-                </Button>
-              </div>
-            </div>
-          </div>
-        </SettingsSection>
-
         {/* Danger Zone */}
         <SettingsSection 
           title="Danger Zone" 
           description="Irreversible actions that affect your data"
-          className="animate-fade-in stagger-5 border-destructive/30"
+          className="animate-fade-in stagger-4 border-destructive/30"
         >
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-xl bg-destructive/5 border border-destructive/20">
@@ -405,6 +484,16 @@ export function SettingsPage() {
           </div>
         </SettingsSection>
       </div>
+
+      {/* Pricing Modal */}
+      <Dialog open={showPricing} onOpenChange={setShowPricing}>
+        <DialogContent className="max-w-5xl apple-dialog">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Choose Your Plan</DialogTitle>
+          </DialogHeader>
+          <PricingPlans onClose={() => setShowPricing(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
