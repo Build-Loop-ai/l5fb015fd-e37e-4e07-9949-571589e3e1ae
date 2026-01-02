@@ -379,27 +379,50 @@ export default function Landing() {
         </div>
       </section>
       
-      {/* How it Works Section */}
-      <section id="how-it-works" className="py-24 px-6 relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_hsl(var(--primary)_/_0.05)_0%,_transparent_50%)]" />
+      {/* Transition to light */}
+      <div className="h-32 bg-gradient-to-b from-background via-neutral-200/50 to-white" />
+      
+      {/* How it Works Section - Light theme */}
+      <section id="how-it-works" className="py-24 px-6 relative bg-white">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_hsl(330_100%_60%_/_0.06)_0%,_transparent_50%)]" />
         
         <div className="max-w-4xl mx-auto relative z-10">
           <AnimatedSection className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
               How it works
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
               From idea to outreach in minutes, not hours.
             </p>
           </AnimatedSection>
           
           <div className="space-y-12">
             {steps.map((step, i) => (
-              <StepItem key={step.title} number={i + 1} {...step} index={i} />
+              <motion.div
+                key={step.title}
+                initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.6, delay: i * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                className="flex gap-6 items-start"
+              >
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-lg font-bold text-primary shadow-sm">
+                    {i + 1}
+                  </div>
+                </div>
+                <div className="pt-1">
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-1.5">{step.title}</h3>
+                  <p className="text-neutral-600 text-sm leading-relaxed">{step.description}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
+      
+      {/* Transition back to dark */}
+      <div className="h-32 bg-gradient-to-b from-white via-neutral-200/50 to-background" />
       
       {/* Pricing Section */}
       <section id="pricing" className="py-24 px-6">
