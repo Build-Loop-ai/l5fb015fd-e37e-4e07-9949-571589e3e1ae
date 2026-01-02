@@ -223,42 +223,74 @@ export default function Landing() {
   
   return (
     <div className="min-h-screen bg-background overflow-hidden">
-      {/* Navigation */}
+      {/* Navigation - Ultra Premium */}
       <motion.nav 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-background/50 backdrop-blur-xl border-b border-border/30"
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <div className="w-4 h-4 rounded-full bg-primary-foreground/90" />
+        <div className="relative px-2 py-2 rounded-2xl bg-background/60 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.03)]">
+          {/* Subtle top shine */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-t-2xl" />
+          
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-3 pl-3">
+              <div className="relative group">
+                <div className="absolute inset-0 rounded-xl bg-primary/40 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
+                  <div className="w-4 h-4 rounded-full bg-white/90 shadow-inner" />
+                </div>
+              </div>
+              <span className="text-lg font-semibold text-foreground tracking-tight">LeadFlow</span>
             </div>
-            <span className="text-lg font-semibold text-foreground tracking-tight">LeadFlow</span>
-          </div>
-          
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
-            <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">How it Works</a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {user ? (
-              <Button onClick={() => navigate('/dashboard')} className="apple-button h-9 px-4 text-sm">
-                Dashboard
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" onClick={() => navigate('/auth')} className="text-muted-foreground hover:text-foreground h-9">
-                  Sign In
-                </Button>
-                <Button onClick={() => navigate('/auth')} className="apple-button h-9 px-4 text-sm">
-                  Get Started
-                </Button>
-              </>
-            )}
+            
+            {/* Center Nav Links */}
+            <div className="hidden md:flex items-center">
+              <div className="flex items-center bg-white/[0.03] rounded-xl p-1">
+                {[
+                  { label: 'Features', href: '#features' },
+                  { label: 'How it Works', href: '#how-it-works' },
+                  { label: 'Pricing', href: '#pricing' },
+                ].map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className="relative px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-white/[0.04]"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+            
+            {/* Right Actions */}
+            <div className="flex items-center gap-2 pr-1">
+              {user ? (
+                <button 
+                  onClick={() => navigate('/dashboard')} 
+                  className="h-9 px-5 rounded-xl text-sm font-medium bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-[0_2px_8px_rgba(255,45,146,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] hover:shadow-[0_4px_16px_rgba(255,45,146,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  Dashboard
+                </button>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => navigate('/auth')} 
+                    className="hidden sm:flex h-9 px-4 items-center text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  >
+                    Sign In
+                  </button>
+                  <button 
+                    onClick={() => navigate('/auth')} 
+                    className="h-9 px-5 rounded-xl text-sm font-medium bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-[0_2px_8px_rgba(255,45,146,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] hover:shadow-[0_4px_16px_rgba(255,45,146,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-all duration-300 hover:-translate-y-0.5"
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </motion.nav>
