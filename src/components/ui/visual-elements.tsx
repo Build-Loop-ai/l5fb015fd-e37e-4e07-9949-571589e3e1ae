@@ -211,15 +211,30 @@ export function SendArrow({ className }: { className?: string }) {
 
 export function MagnetPull({ className }: { className?: string }) {
   return (
-    <div className={cn('relative', className)}>
-      <div className="absolute inset-x-[20%] top-0 h-1/2 rounded-t-full border-4 border-b-0 border-primary" />
-      <div className="absolute left-[20%] bottom-[40%] w-[25%] h-[45%] bg-primary/80 rounded-b-lg" />
-      <div className="absolute right-[20%] bottom-[40%] w-[25%] h-[45%] bg-primary/50 rounded-b-lg" />
-      <div className="absolute inset-x-[35%] bottom-[15%] flex flex-col gap-0.5">
-        <div className="h-0.5 w-full bg-primary/40 rounded-full" />
-        <div className="h-0.5 w-3/4 mx-auto bg-primary/30 rounded-full" />
-        <div className="h-0.5 w-1/2 mx-auto bg-primary/20 rounded-full" />
-      </div>
-    </div>
+    <svg className={cn('', className)} viewBox="0 0 48 48" fill="none">
+      <defs>
+        <linearGradient id="magnetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="hsl(330 100% 70%)" />
+          <stop offset="100%" stopColor="hsl(330 100% 50%)" />
+        </linearGradient>
+        <linearGradient id="magnetGlow" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="hsl(330 100% 60% / 0.6)" />
+          <stop offset="100%" stopColor="hsl(330 100% 60% / 0)" />
+        </linearGradient>
+      </defs>
+      {/* Glow effect */}
+      <ellipse cx="24" cy="32" rx="12" ry="6" fill="url(#magnetGlow)" />
+      {/* Center orb */}
+      <circle cx="24" cy="18" r="8" fill="url(#magnetGrad)" />
+      <circle cx="21" cy="15" r="2" fill="white" fillOpacity="0.4" />
+      {/* Attraction lines */}
+      <path d="M24 28 L24 38" stroke="hsl(330 100% 60% / 0.4)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 3" />
+      <path d="M18 26 L12 34" stroke="hsl(330 100% 60% / 0.3)" strokeWidth="1" strokeLinecap="round" strokeDasharray="2 3" />
+      <path d="M30 26 L36 34" stroke="hsl(330 100% 60% / 0.3)" strokeWidth="1" strokeLinecap="round" strokeDasharray="2 3" />
+      {/* Orbiting dots */}
+      <circle cx="14" cy="20" r="2.5" fill="hsl(330 100% 60% / 0.5)" />
+      <circle cx="34" cy="16" r="2" fill="hsl(330 100% 60% / 0.4)" />
+      <circle cx="28" cy="28" r="1.5" fill="hsl(330 100% 60% / 0.3)" />
+    </svg>
   );
 }
