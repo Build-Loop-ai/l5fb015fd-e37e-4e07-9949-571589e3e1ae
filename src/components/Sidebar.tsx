@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { GlowDot, AbstractBlob } from './ui/visual-elements';
-import { supabase } from '@/integrations/supabase/client';
-
-const CREDITS_PER_LEAD = 1;
-const MAX_CREDITS = 5000;
+import { useAuth } from '@/contexts/AuthContext';
+import { PLANS, PlanId } from '@/lib/plans';
+import { Button } from './ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
   activeTab: string;
@@ -20,8 +19,6 @@ const navItems = [
 ];
 
 function NavVisual({ type, active }: { type: string; active: boolean }) {
-  const baseClass = active ? 'text-primary' : 'text-muted-foreground';
-  
   switch (type) {
     case 'bars':
       return (
@@ -74,28 +71,18 @@ function NavVisual({ type, active }: { type: string; active: boolean }) {
 }
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
-  const [leadsCount, setLeadsCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, subscription, subscriptionLoading, signOut } = useAuth();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    async function fetchLeadsCount() {
-      try {
-        const { count } = await supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true });
-        setLeadsCount(count || 0);
-      } catch (error) {
-        console.error('Failed to fetch leads count:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+  const currentPlan = PLANS[subscription?.plan_id as PlanId] || PLANS.free;
+  const creditsUsed = subscription?.credits_used || 0;
+  const creditsLimit = subscription?.credits_limit || currentPlan.credits;
+  const creditsPercentage = Math.min((creditsUsed / creditsLimit) * 100, 100);
 
-    fetchLeadsCount();
-  }, []);
-
-  const creditsUsed = leadsCount * CREDITS_PER_LEAD;
-  const creditsPercentage = Math.min((creditsUsed / MAX_CREDITS) * 100, 100);
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-72 bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -141,30 +128,70 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="p-5 border-t border-sidebar-border">
+      <div className="p-5 border-t border-sidebar-border space-y-4">
+        {/* Plan Card */}
         <div className="glass-strong rounded-2xl p-5 relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-24 h-24 opacity-30">
             <AbstractBlob className="w-full h-full" />
           </div>
           <div className="relative">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-foreground">Pro Plan</p>
-              <span className="text-xs text-primary font-semibold tracking-wide">UPGRADE</span>
+              <p className="text-sm font-semibold text-foreground">
+                {subscriptionLoading ? '...' : currentPlan.name}
+              </p>
+              {currentPlan.id !== 'free' && subscription?.subscribed ? (
+                <span className="text-xs text-success font-semibold tracking-wide">ACTIVE</span>
+              ) : (
+                <button 
+                  onClick={() => onTabChange('settings')}
+                  className="text-xs text-primary font-semibold tracking-wide hover:underline"
+                >
+                  UPGRADE
+                </button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-              {isLoading ? '...' : `${creditsUsed.toLocaleString()} / ${MAX_CREDITS.toLocaleString()} credits`}
+              {subscriptionLoading 
+                ? '...' 
+                : `${creditsUsed.toLocaleString()} / ${creditsLimit.toLocaleString()} credits`}
             </p>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full rounded-full transition-all duration-700"
                 style={{ 
                   width: `${creditsPercentage}%`,
-                  background: 'linear-gradient(90deg, hsl(330 100% 63%), hsl(350 90% 65%), hsl(15 95% 60%))'
+                  background: creditsPercentage > 90 
+                    ? 'hsl(0 72% 55%)' 
+                    : 'linear-gradient(90deg, hsl(330 100% 63%), hsl(350 90% 65%), hsl(15 95% 60%))'
                 }} 
               />
             </div>
           </div>
         </div>
+
+        {/* User Info & Sign Out */}
+        {user && (
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-semibold text-primary">
+                  {user.email?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground truncate">
+                {user.email}
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Sign Out
+            </Button>
+          </div>
+        )}
       </div>
     </aside>
   );

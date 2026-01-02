@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sidebar } from '@/components/Sidebar';
 import { StatCard } from '@/components/StatCard';
 import { LeadTable } from '@/components/LeadTable';
@@ -21,6 +22,7 @@ import {
 } from '@/lib/api';
 import { Lead as LegacyLead } from '@/types/lead';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -33,6 +35,36 @@ export default function Index() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [findMoreCampaign, setFindMoreCampaign] = useState<Campaign | null>(null);
   const { toast } = useToast();
+  const { user, loading: authLoading, refreshSubscription } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Handle checkout success/cancel
+  useEffect(() => {
+    const checkout = searchParams.get('checkout');
+    if (checkout === 'success') {
+      toast({
+        title: 'Subscription activated!',
+        description: 'Your plan has been upgraded successfully.',
+      });
+      refreshSubscription();
+      // Clean up URL
+      navigate('/', { replace: true });
+    } else if (checkout === 'canceled') {
+      toast({
+        title: 'Checkout canceled',
+        description: 'You can upgrade anytime from Settings.',
+      });
+      navigate('/', { replace: true });
+    }
+  }, [searchParams, toast, refreshSubscription, navigate]);
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -74,21 +106,22 @@ export default function Index() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (selectedCampaignId) {
       loadLeadsForCampaign(selectedCampaignId);
-    } else {
-      // Reload all leads when filter is cleared
+    } else if (user) {
       getLeads().then(result => {
         if (result.success && result.leads) {
           setDbLeads(result.leads);
         }
       });
     }
-  }, [selectedCampaignId]);
+  }, [selectedCampaignId, user]);
 
   const convertedLeads: LegacyLead[] = dbLeads.map((lead) => ({
     id: lead.id || '',
@@ -154,7 +187,8 @@ export default function Index() {
 
   const replyRate = stats.contacted > 0 ? Math.round((stats.replied / stats.contacted) * 100) : 0;
 
-  if (isLoading) {
+  // Show loading while checking auth
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
@@ -163,6 +197,11 @@ export default function Index() {
         </div>
       </div>
     );
+  }
+
+  // Don't render main content if not authenticated
+  if (!user) {
+    return null;
   }
 
   return (
