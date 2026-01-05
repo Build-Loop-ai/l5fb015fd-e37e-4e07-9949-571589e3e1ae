@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Lead } from '@/types/lead';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Sheet,
   SheetContent,
@@ -22,7 +23,12 @@ import {
   GraduationCap,
   Award,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Globe,
+  Users,
+  Clock,
+  Languages,
+  ExternalLink
 } from 'lucide-react';
 import { enrichLeadWithLinkedIn, LinkedInProfile } from '@/lib/api';
 import { toast } from 'sonner';
@@ -54,6 +60,7 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
   const linkedinData: LinkedInProfile | null = profileData?.linkedin || null;
   const isEnriched = !!linkedinData;
   const linkedinUrl = lead.linkedin || profileData?.linkedin?.linkedinUrl;
+  const enrichedAt = profileData?.linkedin_enriched_at;
 
   const handleEnrich = async () => {
     if (!linkedinUrl) {
@@ -77,18 +84,65 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
     }
   };
 
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
+
+  const formatNumber = (num: number | undefined) => {
+    if (!num) return null;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
+
   return (
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-lg bg-card border-border overflow-y-auto">
         <SheetHeader className="pb-4 border-b border-border">
-          <div className="flex items-start justify-between">
-            <div>
-              <SheetTitle className="text-xl text-foreground">{lead.name}</SheetTitle>
-              <p className="text-muted-foreground">{lead.title}</p>
+          <div className="flex items-start gap-4">
+            {/* Profile Picture */}
+            <Avatar className="w-20 h-20 border-2 border-primary/20 shadow-lg">
+              <AvatarImage src={linkedinData?.profilePicture} alt={lead.name} />
+              <AvatarFallback className="text-xl bg-primary/10 text-primary font-semibold">
+                {getInitials(lead.name)}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <SheetTitle className="text-xl text-foreground truncate">
+                    {linkedinData?.fullName || lead.name}
+                  </SheetTitle>
+                  <p className="text-muted-foreground truncate">{lead.title}</p>
+                  {linkedinData?.headline && linkedinData.headline !== lead.title && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {linkedinData.headline}
+                    </p>
+                  )}
+                </div>
+                <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0 -mt-1 -mr-2">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Social Stats */}
+              {isEnriched && (linkedinData?.connections || linkedinData?.followers) && (
+                <div className="flex items-center gap-3 mt-2">
+                  {linkedinData?.connections && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {formatNumber(linkedinData.connections)}+ connections
+                    </span>
+                  )}
+                  {linkedinData?.followers && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {formatNumber(linkedinData.followers)} followers
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
           </div>
         </SheetHeader>
 
@@ -101,7 +155,14 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                   {isEnriched ? (
                     <>
                       <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-green-500 font-medium">LinkedIn Enriched</span>
+                      <div>
+                        <span className="text-sm text-green-500 font-medium">LinkedIn Enriched</span>
+                        {enrichedAt && (
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(enrichedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <>
@@ -193,12 +254,8 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                   className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <Linkedin className="w-4 h-4 text-[#0077B5]" />
-                  <span className="text-sm text-foreground">View LinkedIn Profile</span>
-                  {linkedinData?.connections && (
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {linkedinData.connections}+ connections
-                    </span>
-                  )}
+                  <span className="text-sm text-foreground flex-1">View LinkedIn Profile</span>
+                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
                 </a>
               )}
             </div>
@@ -228,6 +285,49 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                   <span className="text-sm text-foreground">{lead.location || linkedinData?.jobLocation}</span>
                 </div>
               )}
+              
+              {/* Company Website */}
+              {linkedinData?.companyWebsite && (
+                <a 
+                  href={linkedinData.companyWebsite.startsWith('http') ? linkedinData.companyWebsite : `https://${linkedinData.companyWebsite}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-foreground flex-1 truncate">{linkedinData.companyWebsite}</span>
+                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                </a>
+              )}
+              
+              {/* Company LinkedIn */}
+              {linkedinData?.companyLinkedin && (
+                <a 
+                  href={linkedinData.companyLinkedin}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <Linkedin className="w-4 h-4 text-[#0077B5]" />
+                  <span className="text-sm text-foreground flex-1">Company LinkedIn</span>
+                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                </a>
+              )}
+              
+              {/* Job Duration */}
+              {linkedinData?.currentJobDuration && (
+                <div className="flex items-center gap-3 p-3 glass rounded-lg">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm text-foreground">Current role: {linkedinData.currentJobDuration}</p>
+                    {linkedinData?.jobStartedOn && (
+                      <p className="text-xs text-muted-foreground">
+                        Started {linkedinData.jobStartedOn}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -236,18 +336,21 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-muted-foreground" />
-                Experience
+                Experience ({linkedinData.experiences.length})
               </h3>
               <div className="space-y-2">
-                {linkedinData.experiences.slice(0, 3).map((exp, idx) => (
+                {linkedinData.experiences.slice(0, 4).map((exp, idx) => (
                   <div key={idx} className="glass rounded-lg p-3">
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">{exp.title}</p>
                         <p className="text-xs text-muted-foreground">{exp.companyName}</p>
+                        {exp.location && (
+                          <p className="text-xs text-muted-foreground">{exp.location}</p>
+                        )}
                       </div>
                       {exp.duration && (
-                        <span className="text-xs text-muted-foreground">{exp.duration}</span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">{exp.duration}</span>
                       )}
                     </div>
                     {exp.description && (
@@ -257,6 +360,11 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                     )}
                   </div>
                 ))}
+                {linkedinData.experiences.length > 4 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    +{linkedinData.experiences.length - 4} more positions
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -269,7 +377,7 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                 Education
               </h3>
               <div className="space-y-2">
-                {linkedinData.educations.slice(0, 2).map((edu, idx) => (
+                {linkedinData.educations.slice(0, 3).map((edu, idx) => (
                   <div key={idx} className="glass rounded-lg p-3">
                     <p className="text-sm font-medium text-foreground">{edu.schoolName}</p>
                     {(edu.degree || edu.fieldOfStudy) && (
@@ -277,7 +385,63 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                         {[edu.degree, edu.fieldOfStudy].filter(Boolean).join(' · ')}
                       </p>
                     )}
+                    {(edu.startYear || edu.endYear) && (
+                      <p className="text-xs text-muted-foreground">
+                        {[edu.startYear, edu.endYear].filter(Boolean).join(' - ')}
+                      </p>
+                    )}
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Certifications (if enriched) */}
+          {linkedinData?.certifications && linkedinData.certifications.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Award className="w-4 h-4 text-muted-foreground" />
+                Certifications ({linkedinData.certifications.length})
+              </h3>
+              <div className="space-y-2">
+                {linkedinData.certifications.slice(0, 4).map((cert, idx) => (
+                  <div key={idx} className="glass rounded-lg p-3">
+                    <p className="text-sm font-medium text-foreground">{cert.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {cert.authority && (
+                        <span className="text-xs text-muted-foreground">{cert.authority}</span>
+                      )}
+                      {cert.authority && cert.issueDate && (
+                        <span className="text-xs text-muted-foreground">·</span>
+                      )}
+                      {cert.issueDate && (
+                        <span className="text-xs text-muted-foreground">{cert.issueDate}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {linkedinData.certifications.length > 4 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    +{linkedinData.certifications.length - 4} more certifications
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Languages (if enriched) */}
+          {linkedinData?.languages && linkedinData.languages.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Languages className="w-4 h-4 text-muted-foreground" />
+                Languages
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {linkedinData.languages.map((lang, idx) => (
+                  <Badge key={idx} variant="outline" className="text-xs">
+                    {lang.name}
+                    {lang.proficiency && ` · ${lang.proficiency}`}
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -287,18 +451,18 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
           {linkedinData?.skills && linkedinData.skills.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Award className="w-4 h-4 text-muted-foreground" />
-                Skills
+                <Sparkles className="w-4 h-4 text-muted-foreground" />
+                Skills ({linkedinData.skills.length})
               </h3>
               <div className="flex flex-wrap gap-2">
-                {linkedinData.skills.slice(0, 10).map((skill, idx) => (
+                {linkedinData.skills.slice(0, 12).map((skill, idx) => (
                   <Badge key={idx} variant="outline" className="text-xs">
                     {skill.title}
                   </Badge>
                 ))}
-                {linkedinData.skills.length > 10 && (
+                {linkedinData.skills.length > 12 && (
                   <Badge variant="outline" className="text-xs text-muted-foreground">
-                    +{linkedinData.skills.length - 10} more
+                    +{linkedinData.skills.length - 12} more
                   </Badge>
                 )}
               </div>
