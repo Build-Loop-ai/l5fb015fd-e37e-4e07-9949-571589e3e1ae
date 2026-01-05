@@ -202,6 +202,15 @@ export interface LinkedInProfile {
   currentJobDuration: string;
   connections: number;
   followers: number;
+  // Verification & status
+  isVerified?: boolean;
+  isPremium?: boolean;
+  isCreator?: boolean;
+  isInfluencer?: boolean;
+  // Career stats
+  totalExperienceYears?: number;
+  firstRoleYear?: number | null;
+  experiencesCount?: number;
   experiences: Array<{
     title: string;
     companyName: string;
@@ -213,6 +222,9 @@ export interface LinkedInProfile {
     duration: string;
     companyIndustry: string;
     companySize: string;
+    companyLogo?: string;
+    companyWebsite?: string;
+    employmentType?: string;
   }>;
   educations: Array<{
     schoolName: string;
@@ -221,13 +233,30 @@ export interface LinkedInProfile {
     startYear: string;
     endYear: string;
     description: string;
+    logo?: string;
   }>;
   skills: Array<{ title: string }>;
   languages: Array<{ name: string; proficiency: string }>;
-  certifications: Array<{ name: string; authority: string; issueDate: string }>;
+  certifications: Array<{ name: string; authority: string; issueDate: string; url?: string }>;
+  volunteerExperience?: Array<{
+    role: string;
+    organization: string;
+    description: string;
+    industry: string;
+  }>;
+  relatedProfiles?: Array<{
+    name: string;
+    headline: string;
+    linkedinUrl: string;
+    profilePicture: string;
+    followers?: number;
+  }>;
   linkedinUrl: string;
   publicIdentifier: string;
   profilePicture: string;
+  backgroundPicture?: string;
+  addressCountryOnly?: string;
+  addressWithCountry?: string;
 }
 
 export async function enrichLeadWithLinkedIn(
