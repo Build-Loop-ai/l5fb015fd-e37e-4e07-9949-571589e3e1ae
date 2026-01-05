@@ -4,7 +4,9 @@ import { Campaign } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { CheckCircle2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,9 +205,29 @@ export function LeadTable({
                     onClick={() => onLeadClick(lead)}
                   >
                     <td className="p-5">
-                      <div>
-                        <p className="font-semibold text-foreground">{lead.name}</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">{lead.title || 'No title'}</p>
+                      <div className="flex items-center gap-3">
+                        {/* Avatar with enrichment indicator */}
+                        <div className="relative">
+                          <Avatar className="w-10 h-10 border border-border">
+                            <AvatarImage 
+                              src={(lead.profile_data || lead.profileData)?.linkedin?.profilePicture} 
+                              alt={lead.name} 
+                            />
+                            <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                              {lead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {/* Enriched indicator */}
+                          {(lead.profile_data || lead.profileData)?.linkedin && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-card flex items-center justify-center">
+                              <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">{lead.name}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">{lead.title || 'No title'}</p>
+                        </div>
                       </div>
                     </td>
                     <td className="p-5">
