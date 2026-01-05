@@ -28,7 +28,10 @@ import {
   Users,
   Clock,
   Languages,
-  ExternalLink
+  ExternalLink,
+  BadgeCheck,
+  Crown,
+  Heart
 } from 'lucide-react';
 import { enrichLeadWithLinkedIn, LinkedInProfile } from '@/lib/api';
 import { toast } from 'sonner';
@@ -125,9 +128,21 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                 </Button>
               </div>
 
-              {/* Social Stats */}
-              {isEnriched && (linkedinData?.connections || linkedinData?.followers) && (
-                <div className="flex items-center gap-3 mt-2">
+              {/* Social Stats & Verification */}
+              {isEnriched && (
+                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  {linkedinData?.isVerified && (
+                    <span className="text-xs text-blue-500 flex items-center gap-1">
+                      <BadgeCheck className="w-3 h-3" />
+                      Verified
+                    </span>
+                  )}
+                  {linkedinData?.isPremium && (
+                    <span className="text-xs text-amber-500 flex items-center gap-1">
+                      <Crown className="w-3 h-3" />
+                      Premium
+                    </span>
+                  )}
                   {linkedinData?.connections && (
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Users className="w-3 h-3" />
@@ -138,6 +153,12 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Users className="w-3 h-3" />
                       {formatNumber(linkedinData.followers)} followers
+                    </span>
+                  )}
+                  {linkedinData?.totalExperienceYears && linkedinData.totalExperienceYears > 0 && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Briefcase className="w-3 h-3" />
+                      {linkedinData.totalExperienceYears}+ years exp.
                     </span>
                   )}
                 </div>
@@ -465,6 +486,60 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                     +{linkedinData.skills.length - 12} more
                   </Badge>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Volunteer Experience (if enriched) */}
+          {linkedinData?.volunteerExperience && linkedinData.volunteerExperience.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Heart className="w-4 h-4 text-muted-foreground" />
+                Volunteer Experience
+              </h3>
+              <div className="space-y-2">
+                {linkedinData.volunteerExperience.slice(0, 3).map((vol, idx) => (
+                  <div key={idx} className="glass rounded-lg p-3">
+                    <p className="text-sm font-medium text-foreground">{vol.role}</p>
+                    <p className="text-xs text-muted-foreground">{vol.organization}</p>
+                    {vol.industry && (
+                      <Badge variant="outline" className="text-xs mt-1">{vol.industry}</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Related Profiles (if enriched) */}
+          {linkedinData?.relatedProfiles && linkedinData.relatedProfiles.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Users className="w-4 h-4 text-muted-foreground" />
+                People Also Viewed
+              </h3>
+              <div className="space-y-2">
+                {linkedinData.relatedProfiles.slice(0, 5).map((person, idx) => (
+                  <a
+                    key={idx}
+                    href={person.linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={person.profilePicture} alt={person.name} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {person.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{person.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{person.headline}</p>
+                    </div>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  </a>
+                ))}
               </div>
             </div>
           )}

@@ -54,6 +54,16 @@ serve(async (req) => {
     }
 
     const profile = data[0];
+
+    // Helper to parse education subtitle like "Master's degree, Marketing Management"
+    const parseEducationSubtitle = (subtitle: string | undefined): { degree: string; fieldOfStudy: string } => {
+      if (!subtitle) return { degree: '', fieldOfStudy: '' };
+      const parts = subtitle.split(', ');
+      return {
+        degree: parts[0] || '',
+        fieldOfStudy: parts.slice(1).join(', ') || '',
+      };
+    };
     
     // Extract and normalize the comprehensive profile data
     const linkedinProfile = {
@@ -62,26 +72,37 @@ serve(async (req) => {
       firstName: profile.firstName || '',
       lastName: profile.lastName || '',
       headline: profile.headline || '',
-      summary: profile.summary || profile.about || '',
+      summary: profile.about || profile.summary || '',
       
       // Contact info
       email: profile.email || null,
       mobileNumber: profile.mobileNumber || null,
       
       // Current job
-      jobTitle: profile.jobTitle || profile.headline || '',
+      jobTitle: profile.jobTitle || '',
       companyName: profile.companyName || '',
       companyIndustry: profile.companyIndustry || '',
       companySize: profile.companySize || '',
       companyWebsite: profile.companyWebsite || '',
       companyLinkedin: profile.companyLinkedin || '',
-      jobLocation: profile.jobLocation || '',
+      jobLocation: profile.jobLocation || profile.addressWithCountry || '',
       jobStartedOn: profile.jobStartedOn || '',
       currentJobDuration: profile.currentJobDuration || '',
       
       // Profile stats
       connections: profile.connections || 0,
       followers: profile.followers || 0,
+      
+      // Verification and status
+      isVerified: profile.isVerified || false,
+      isPremium: profile.isPremium || false,
+      isCreator: profile.isCreator || false,
+      isInfluencer: profile.isInfluencer || false,
+      
+      // Career stats
+      totalExperienceYears: profile.totalExperienceYears || 0,
+      firstRoleYear: profile.firstRoleYear || null,
+      experiencesCount: profile.experiencesCount || 0,
       
       // Full experience history
       experiences: (profile.experiences || []).map((exp: any) => ({
@@ -92,20 +113,27 @@ serve(async (req) => {
         startDate: exp.jobStartedOn || exp.startDate || '',
         endDate: exp.jobEndedOn || exp.endDate || null,
         stillWorking: exp.jobStillWorking || false,
-        duration: exp.duration || '',
+        duration: '',
         companyIndustry: exp.companyIndustry || '',
         companySize: exp.companySize || '',
+        companyLogo: exp.logo || '',
+        companyWebsite: exp.companyWebsite || '',
+        employmentType: exp.employmentType || '',
       })),
       
-      // Education
-      educations: (profile.educations || []).map((edu: any) => ({
-        schoolName: edu.schoolName || edu.school || '',
-        degree: edu.degree || '',
-        fieldOfStudy: edu.fieldOfStudy || edu.field || '',
-        startYear: edu.startYear || '',
-        endYear: edu.endYear || '',
-        description: edu.description || '',
-      })),
+      // Education - fix nested structure from Apify
+      educations: (profile.educations || []).map((edu: any) => {
+        const parsed = parseEducationSubtitle(edu.subtitle);
+        return {
+          schoolName: edu.title || edu.schoolName || '',
+          degree: parsed.degree || edu.degree || '',
+          fieldOfStudy: parsed.fieldOfStudy || edu.fieldOfStudy || '',
+          startYear: edu.period?.startedOn?.year?.toString() || edu.startYear || '',
+          endYear: edu.period?.endedOn?.year?.toString() || edu.endYear || '',
+          description: edu.description || '',
+          logo: edu.logo || '',
+        };
+      }),
       
       // Skills
       skills: (profile.skills || []).map((skill: any) => ({
@@ -115,26 +143,48 @@ serve(async (req) => {
       // Languages
       languages: (profile.languages || []).map((lang: any) => ({
         name: typeof lang === 'string' ? lang : (lang.name || ''),
-        proficiency: typeof lang === 'object' ? lang.proficiency : '',
+        proficiency: typeof lang === 'object' ? (lang.proficiency || '') : '',
       })),
       
-      // Certifications
-      certifications: (profile.certifications || []).map((cert: any) => ({
+      // Certifications - Apify uses licenseAndCertificates
+      certifications: (profile.licenseAndCertificates || profile.certifications || []).map((cert: any) => ({
         name: cert.name || cert.title || '',
-        authority: cert.authority || cert.organization || '',
-        issueDate: cert.issueDate || '',
+        authority: cert.authority || '',
+        issueDate: cert.startedOn?.year ? cert.startedOn.year.toString() : (cert.issueDate || ''),
+        url: cert.url || '',
+      })),
+      
+      // Volunteer experience
+      volunteerExperience: (profile.volunteerAndAwards || []).map((vol: any) => ({
+        role: vol.role || '',
+        organization: vol.organization || '',
+        description: vol.description || '',
+        industry: vol.industry || '',
+      })),
+      
+      // Related profiles (people also viewed)
+      relatedProfiles: (profile.peopleAlsoViewed || []).slice(0, 10).map((person: any) => ({
+        name: `${person.first_name || ''} ${person.last_name || ''}`.trim(),
+        headline: person.headline || '',
+        linkedinUrl: person.url || '',
+        profilePicture: person.profile_picture || '',
+        followers: person.follower_count || 0,
       })),
       
       // Profile URL and identifiers
       linkedinUrl: profile.linkedinUrl || profile.linkedinPublicUrl || linkedinUrl,
       publicIdentifier: profile.publicIdentifier || '',
-      profilePicture: profile.profilePicture || profile.profilePictureUrl || '',
       
-      // Raw data for reference
-      _raw: profile,
+      // Profile pictures - Apify uses profilePic not profilePicture
+      profilePicture: profile.profilePic || profile.profilePicHighQuality || profile.profilePicture || '',
+      backgroundPicture: profile.backgroundPic || '',
+      
+      // Location
+      addressCountryOnly: profile.addressCountryOnly || '',
+      addressWithCountry: profile.addressWithCountry || '',
     };
 
-    console.log('Profile extracted:', linkedinProfile.fullName, '- Skills:', linkedinProfile.skills.length, '- Experiences:', linkedinProfile.experiences.length);
+    console.log('Profile extracted:', linkedinProfile.fullName, '- Skills:', linkedinProfile.skills.length, '- Experiences:', linkedinProfile.experiences.length, '- Certifications:', linkedinProfile.certifications.length);
 
     return new Response(
       JSON.stringify({ 
