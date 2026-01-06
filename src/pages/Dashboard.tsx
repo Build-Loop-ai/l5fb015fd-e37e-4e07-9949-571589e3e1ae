@@ -139,6 +139,7 @@ export default function Index() {
     location: lead.location,
     industry: lead.industry || '',
     createdAt: lead.created_at || new Date().toISOString(),
+    profile_data: lead.profile_data, // Pass the full profile_data for enrichment display
   }));
 
   const handleLeadsFound = () => {
