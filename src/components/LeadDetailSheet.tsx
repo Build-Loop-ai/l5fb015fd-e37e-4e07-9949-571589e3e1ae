@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Lead } from '@/types/lead';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,10 +87,19 @@ const StatPill = ({ icon: Icon, children, color = "muted" }: { icon: any; childr
 
 export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDetailSheetProps) {
   const [isEnriching, setIsEnriching] = useState(false);
+  const [localProfileData, setLocalProfileData] = useState<any>(null);
+
+  // Reset local state when lead changes
+  useEffect(() => {
+    if (lead) {
+      setLocalProfileData(lead.profile_data || lead.profileData || null);
+    }
+  }, [lead?.id]);
 
   if (!lead) return null;
 
-  const profileData = lead.profile_data || lead.profileData;
+  // Use local enriched data (updates immediately after enrichment)
+  const profileData = localProfileData;
   const linkedinData: LinkedInProfile | null = profileData?.linkedin || null;
   const isEnriched = !!linkedinData;
   const linkedinUrl = lead.linkedin || profileData?.linkedin?.linkedinUrl;
@@ -106,7 +115,13 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
     setIsEnriching(true);
     try {
       const result = await enrichLeadWithLinkedIn(lead.id, linkedinUrl);
-      if (result.success) {
+      if (result.success && result.profile) {
+        // Update local state immediately with enriched data
+        setLocalProfileData({
+          ...localProfileData,
+          linkedin: result.profile,
+          linkedin_enriched_at: new Date().toISOString(),
+        });
         toast.success('LinkedIn profile enriched successfully');
         onLeadUpdated?.();
       } else {
