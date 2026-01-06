@@ -37,21 +37,19 @@ export function CampaignCard({ campaign, onUpdate, onViewLeads, onFindMoreLeads,
   // Real-time lead subscription for this campaign
   const { newLeadsCount, latestLead, isListening } = useLeadSubscription({
     campaignId: campaign.id,
-    enabled: campaign.status === 'draft' || (campaign.lead_count || 0) === 0,
+    enabled: campaign.status === 'searching',
     onLeadArrived: () => {
       // Trigger a refresh when leads arrive
       onUpdate?.();
     },
   });
 
-  // Determine if campaign is actively searching (draft with no leads or just created)
-  const isSearching = campaign.status === 'draft' && (campaign.lead_count || 0) === 0;
+  // Status now comes directly from the database
+  const isSearching = campaign.status === 'searching';
   const hasNewLeads = newLeadsCount > 0;
   
-  // Use searching status if actively searching
-  const displayStatus = isSearching && !hasNewLeads 
-    ? 'searching' 
-    : campaign.status as keyof typeof statusConfig;
+  // Use the database status directly
+  const displayStatus = campaign.status as keyof typeof statusConfig;
   const status = statusConfig[displayStatus] || statusConfig.draft;
 
   const handleStatusChange = async (newStatus: string) => {

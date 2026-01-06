@@ -106,12 +106,26 @@ Deno.serve(async (req) => {
       console.log('Search record stored for webset:', webset.id);
     }
 
+    // Step 4: Update campaign status to 'searching'
+    if (campaignId) {
+      const { error: updateError } = await supabase
+        .from('campaigns')
+        .update({ status: 'searching' })
+        .eq('id', campaignId);
+      
+      if (updateError) {
+        console.error('Error updating campaign status to searching:', updateError);
+      } else {
+        console.log('Campaign status updated to searching:', campaignId);
+      }
+    }
+
     // Return immediately - webhook will handle the results
     return new Response(JSON.stringify({
       success: true,
       websetId: webset.id,
       webhookId: webhook.id,
-      status: 'processing',
+      status: 'searching',
       message: 'Search started. Leads will be saved automatically via webhook.',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
