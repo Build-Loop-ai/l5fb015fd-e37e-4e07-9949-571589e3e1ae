@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
         })
         .eq('webset_id', websetId);
 
-      // Update campaign lead count
+      // Update campaign lead count and status to 'active'
       if (campaignId) {
         const { count } = await supabase
           .from('leads')
@@ -164,8 +164,13 @@ Deno.serve(async (req) => {
 
         await supabase
           .from('campaigns')
-          .update({ lead_count: count || 0 })
+          .update({ 
+            lead_count: count || 0,
+            status: 'active'  // Automatically activate when leads are found
+          })
           .eq('id', campaignId);
+        
+        console.log('Campaign status updated to active with', count, 'leads');
       }
 
       console.log(`Webset ${websetId} complete: ${savedCount} saved, ${skippedCount} skipped`);
