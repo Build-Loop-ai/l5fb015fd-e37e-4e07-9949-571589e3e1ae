@@ -151,9 +151,15 @@ export default function Index() {
     });
   };
 
-  const handleCampaignCreated = () => {
+  const handleCampaignCreated = (campaignId?: string) => {
     loadData();
     setShowCreateCampaign(false);
+    
+    // If a campaign ID is provided, navigate to that campaign's leads
+    if (campaignId) {
+      setSelectedCampaignId(campaignId);
+      setActiveTab('leads');
+    }
   };
 
   const handleStatusChange = async (leadId: string, newStatus: string) => {
