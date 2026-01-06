@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,16 +8,17 @@ import {
 } from '@/components/ui/dialog';
 import { createCampaign, searchLeadsWithExa } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useLeadSubscription } from '@/hooks/useLeadSubscription';
 import { cn } from '@/lib/utils';
-import { ArrowRight, ArrowLeft, Sparkles, Target, Search, Check } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, Target, Search, Check, Users, Zap, Eye } from 'lucide-react';
 
 interface CreateCampaignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: () => void;
+  onCreated: (campaignId?: string) => void;
 }
 
-type Step = 'name' | 'goal' | 'search' | 'saving';
+type Step = 'name' | 'goal' | 'search' | 'saving' | 'processing';
 
 const searchSuggestions = [
   'Marketing directors at fintech startups',
@@ -56,6 +57,12 @@ const stepConfig = {
     subtitle: 'Setting everything up for you',
     icon: Check,
   },
+  processing: {
+    number: 4,
+    title: 'Finding Leads',
+    subtitle: 'AI is searching for matching profiles',
+    icon: Users,
+  },
 };
 
 export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCampaignDialogProps) {
@@ -66,9 +73,16 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
   const [isSaving, setIsSaving] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const resetState = () => {
+  // Real-time lead subscription
+  const { newLeadsCount, latestLead, isListening } = useLeadSubscription({
+    campaignId: createdCampaignId || undefined,
+    enabled: step === 'processing' && !!createdCampaignId,
+  });
+
+  const resetState = useCallback(() => {
     setStep('name');
     setName('');
     setGoal('');
@@ -76,10 +90,17 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
     setIsSaving(false);
     setIsSearching(false);
     setIsTransitioning(false);
-  };
+    setCreatedCampaignId(null);
+  }, []);
 
   const handleClose = () => {
     if (isSaving || isSearching) return;
+    resetState();
+    onOpenChange(false);
+  };
+
+  const handleViewLeads = () => {
+    onCreated(createdCampaignId || undefined);
     resetState();
     onOpenChange(false);
   };
@@ -144,23 +165,23 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
         throw new Error(campaignResult.error || 'Failed to create campaign');
       }
 
+      const campaignId = campaignResult.campaign.id;
+      setCreatedCampaignId(campaignId);
+
       const searchResult = await searchLeadsWithExa({
         query: searchQuery.trim(),
-        campaignId: campaignResult.campaign.id,
+        campaignId: campaignId,
       });
 
       if (!searchResult.success) {
         throw new Error(searchResult.error || 'Failed to start lead search');
       }
 
-      toast({
-        title: 'Campaign created',
-        description: 'Leads will be added automatically in 1–2 minutes.',
-      });
+      // Transition to processing view instead of closing
+      setIsSaving(false);
+      setIsSearching(false);
+      transitionTo('processing');
 
-      resetState();
-      onCreated();
-      onOpenChange(false);
     } catch (error: any) {
       console.error('Create/search error:', error);
       toast({
@@ -168,10 +189,9 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
         description: error?.message || 'Failed to create campaign',
         variant: 'destructive',
       });
-      transitionTo('search');
-    } finally {
       setIsSaving(false);
       setIsSearching(false);
+      transitionTo('search');
     }
   };
 
@@ -187,6 +207,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
   const config = stepConfig[step];
   const StepIcon = config.icon;
 
+  const progressWidth = step === 'processing' 
+    ? 100 
+    : ((currentStepIndex + 1) / steps.length) * 100;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
@@ -199,8 +223,13 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
         {/* Progress bar */}
         <div className="h-1 bg-muted/30">
           <div 
-            className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-700 ease-out"
-            style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
+            className={cn(
+              "h-full transition-all duration-700 ease-out",
+              step === 'processing' 
+                ? "bg-gradient-to-r from-primary via-primary/70 to-primary animate-pulse" 
+                : "bg-gradient-to-r from-primary to-primary/70"
+            )}
+            style={{ width: `${progressWidth}%` }}
           />
         </div>
 
@@ -210,14 +239,31 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
             "flex items-center gap-3 mb-8 transition-all duration-300",
             isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
           )}>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
-              <StepIcon className="w-5 h-5 text-primary" />
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center border",
+              step === 'processing' 
+                ? "bg-gradient-to-br from-success/20 to-success/5 border-success/20" 
+                : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/20"
+            )}>
+              <StepIcon className={cn(
+                "w-5 h-5",
+                step === 'processing' ? "text-success" : "text-primary"
+              )} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-primary/70 uppercase tracking-widest">
-                  Step {config.number} of 3
+                <span className={cn(
+                  "text-xs font-medium uppercase tracking-widest",
+                  step === 'processing' ? "text-success/70" : "text-primary/70"
+                )}>
+                  {step === 'processing' ? 'Live' : `Step ${config.number} of 3`}
                 </span>
+                {step === 'processing' && isListening && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                    <span className="text-xs text-success/70">Connected</span>
+                  </span>
+                )}
               </div>
               <h2 className="text-2xl font-semibold text-foreground tracking-tight mt-0.5">
                 {config.title}
@@ -372,6 +418,93 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
                 </div>
               </div>
             )}
+
+            {/* Processing state - Live lead counter */}
+            {step === 'processing' && (
+              <div className="flex flex-col items-center justify-center py-4">
+                {/* Live counter */}
+                <div className="relative mb-6">
+                  <div className={cn(
+                    "w-28 h-28 rounded-3xl flex flex-col items-center justify-center border transition-all duration-500",
+                    newLeadsCount > 0 
+                      ? "bg-gradient-to-br from-success/20 to-success/5 border-success/30" 
+                      : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/20"
+                  )}>
+                    {newLeadsCount > 0 ? (
+                      <>
+                        <span className="text-4xl font-bold text-success">{newLeadsCount}</span>
+                        <span className="text-xs text-success/70 font-medium mt-1">leads found</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="apple-spinner mb-2" />
+                        <span className="text-xs text-muted-foreground">Searching...</span>
+                      </>
+                    )}
+                  </div>
+                  {newLeadsCount > 0 && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-success animate-ping" />
+                  )}
+                </div>
+
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  {newLeadsCount > 0 ? 'Leads are arriving!' : 'AI is searching...'}
+                </h3>
+                <p className="text-muted-foreground text-center max-w-md mb-6">
+                  {newLeadsCount > 0 
+                    ? `Found ${newLeadsCount} matching profiles so far. More leads may arrive in the next minute.`
+                    : `Searching for "${searchQuery}". This usually takes 1-2 minutes.`
+                  }
+                </p>
+
+                {/* Latest lead preview */}
+                {latestLead && (
+                  <div className="w-full max-w-md p-4 rounded-2xl bg-muted/30 border border-border/50 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-sm font-medium text-primary">
+                        {latestLead.name?.charAt(0) || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{latestLead.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {latestLead.title} {latestLead.company && `at ${latestLead.company}`}
+                        </p>
+                      </div>
+                      <Zap className="w-4 h-4 text-success flex-shrink-0" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Status indicators */}
+                <div className="flex items-center gap-6">
+                  {[
+                    { label: 'Campaign', done: true },
+                    { label: 'Search', done: true },
+                    { label: 'AI Processing', done: false, active: true },
+                  ].map((item, i) => (
+                    <div key={item.label} className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center transition-all duration-500",
+                        item.done ? "bg-success text-success-foreground" : 
+                        item.active ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground"
+                      )}>
+                        {item.done ? (
+                          <Check className="w-3 h-3" />
+                        ) : item.active ? (
+                          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        ) : (
+                          <span className="text-xs">{i + 1}</span>
+                        )}
+                      </div>
+                      <span className={cn(
+                        "text-sm",
+                        item.done || item.active ? "text-foreground" : "text-muted-foreground"
+                      )}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -379,7 +512,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
         {step !== 'saving' && (
           <div className="px-10 py-6 border-t border-border/50 bg-muted/20 flex items-center justify-between">
             <div>
-              {step !== 'name' && (
+              {step !== 'name' && step !== 'processing' && (
                 <Button 
                   variant="ghost" 
                   onClick={() => transitionTo(step === 'goal' ? 'name' : 'goal')}
@@ -389,15 +522,22 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
                   Back
                 </Button>
               )}
+              {step === 'processing' && (
+                <p className="text-xs text-muted-foreground">
+                  You can close this and leads will keep arriving
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                onClick={handleClose}
-                className="text-muted-foreground"
-              >
-                Cancel
-              </Button>
+              {step !== 'processing' && (
+                <Button 
+                  variant="ghost" 
+                  onClick={handleClose}
+                  className="text-muted-foreground"
+                >
+                  Cancel
+                </Button>
+              )}
               {step === 'name' && (
                 <Button onClick={handleNextToGoal} className="apple-button gap-2">
                   Continue
@@ -418,6 +558,16 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
                 >
                   Create Campaign
                   <Sparkles className="w-4 h-4" />
+                </Button>
+              )}
+              {step === 'processing' && (
+                <Button 
+                  onClick={handleViewLeads}
+                  className="apple-button gap-2"
+                  disabled={newLeadsCount === 0}
+                >
+                  <Eye className="w-4 h-4" />
+                  View {newLeadsCount > 0 ? `${newLeadsCount} Leads` : 'Leads'}
                 </Button>
               )}
             </div>
