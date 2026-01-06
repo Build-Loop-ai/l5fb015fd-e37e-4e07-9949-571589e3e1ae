@@ -52,15 +52,23 @@ export function LeadTable({
   onDelete 
 }: LeadTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<keyof Lead>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const filteredLeads = leads
-    .filter(lead => 
-      lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter(lead => {
+      // Search filter
+      const matchesSearch = 
+        lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
     .sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
@@ -120,9 +128,23 @@ export function LeadTable({
           </Select>
         )}
 
-        <Button variant="outline" size="sm" className="rounded-xl">
-          Filters
-        </Button>
+        {/* Status Filter */}
+        <Select 
+          value={statusFilter} 
+          onValueChange={setStatusFilter}
+        >
+          <SelectTrigger className="w-[150px] rounded-xl">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent className="glass-strong">
+            <SelectItem value="all">All Statuses</SelectItem>
+            {Object.entries(statusConfig).map(([key, config]) => (
+              <SelectItem key={key} value={key}>
+                {config.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Campaign Info Banner */}
