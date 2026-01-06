@@ -6,8 +6,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
 } from '@/components/ui/sheet';
 import { 
   Mail, 
@@ -31,7 +29,8 @@ import {
   ExternalLink,
   BadgeCheck,
   Crown,
-  Heart
+  Heart,
+  ChevronRight
 } from 'lucide-react';
 import { enrichLeadWithLinkedIn, LinkedInProfile } from '@/lib/api';
 import { toast } from 'sonner';
@@ -43,14 +42,47 @@ interface LeadDetailSheetProps {
   onLeadUpdated?: () => void;
 }
 
-const statusVariants: Record<string, string> = {
-  new: 'new',
-  contacted: 'contacted',
-  responded: 'responded',
-  qualified: 'qualified',
-  replied: 'replied',
-  unqualified: 'unqualified',
-  lost: 'lost',
+// Section wrapper for consistent styling
+const Section = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`space-y-3 ${className}`}>{children}</div>
+);
+
+// Section header with icon
+const SectionHeader = ({ icon: Icon, children, count }: { icon: any; children: React.ReactNode; count?: number }) => (
+  <div className="flex items-center gap-2.5">
+    <div className="w-7 h-7 rounded-lg bg-muted/50 flex items-center justify-center">
+      <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+    </div>
+    <h3 className="text-sm font-medium text-foreground tracking-tight">{children}</h3>
+    {count !== undefined && (
+      <span className="text-xs text-muted-foreground ml-auto">{count}</span>
+    )}
+  </div>
+);
+
+// Card wrapper for items
+const ItemCard = ({ children, className = "", hover = false }: { children: React.ReactNode; className?: string; hover?: boolean }) => (
+  <div className={`rounded-xl bg-muted/30 border border-border/50 p-3.5 ${hover ? 'hover:bg-muted/50 transition-colors cursor-pointer' : ''} ${className}`}>
+    {children}
+  </div>
+);
+
+// Stat pill component
+const StatPill = ({ icon: Icon, children, color = "muted" }: { icon: any; children: React.ReactNode; color?: string }) => {
+  const colorClasses: Record<string, string> = {
+    muted: "bg-muted/50 text-muted-foreground",
+    blue: "bg-blue-500/10 text-blue-500",
+    amber: "bg-amber-500/10 text-amber-500",
+    purple: "bg-purple-500/10 text-purple-500",
+    green: "bg-green-500/10 text-green-500",
+  };
+  
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${colorClasses[color]}`}>
+      <Icon className="w-3 h-3" />
+      {children}
+    </span>
+  );
 };
 
 export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDetailSheetProps) {
@@ -58,12 +90,12 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
 
   if (!lead) return null;
 
-  // Support both snake_case (from DB) and camelCase (from type)
   const profileData = lead.profile_data || lead.profileData;
   const linkedinData: LinkedInProfile | null = profileData?.linkedin || null;
   const isEnriched = !!linkedinData;
   const linkedinUrl = lead.linkedin || profileData?.linkedin?.linkedinUrl;
   const enrichedAt = profileData?.linkedin_enriched_at;
+  const exaEnrichments = profileData?.enrichments || [];
 
   const handleEnrich = async () => {
     if (!linkedinUrl) {
@@ -97,609 +129,459 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
     return num.toString();
   };
 
-  // Exa enrichments data
-  const exaEnrichments = profileData?.enrichments || [];
-
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg bg-card border-border overflow-y-auto p-0">
-        {/* Background Banner */}
-        {linkedinData?.backgroundPicture && (
-          <div 
-            className="w-full h-24 bg-cover bg-center"
-            style={{ backgroundImage: `url(${linkedinData.backgroundPicture})` }}
-          />
-        )}
-        
-        <div className={`px-6 ${linkedinData?.backgroundPicture ? '-mt-10' : 'pt-6'}`}>
-          <SheetHeader className="pb-4 border-b border-border">
+      <SheetContent className="w-full sm:max-w-[480px] bg-background border-l border-border/50 p-0 flex flex-col overflow-hidden">
+        {/* Header with gradient background */}
+        <div className="relative flex-shrink-0">
+          {/* Background gradient or image */}
+          <div className="absolute inset-0 h-32 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
+          {linkedinData?.backgroundPicture && (
+            <div 
+              className="absolute inset-0 h-32 bg-cover bg-center opacity-30"
+              style={{ backgroundImage: `url(${linkedinData.backgroundPicture})` }}
+            />
+          )}
+          
+          {/* Close button */}
+          <button 
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+
+          {/* Profile section */}
+          <div className="relative pt-6 px-6 pb-5">
             <div className="flex items-start gap-4">
-              {/* Profile Picture */}
-              <Avatar className={`w-20 h-20 border-4 border-card shadow-lg ${linkedinData?.backgroundPicture ? 'ring-2 ring-primary/20' : 'border-primary/20'}`}>
-                <AvatarImage src={linkedinData?.profilePicture} alt={lead.name} />
-                <AvatarFallback className="text-xl bg-primary/10 text-primary font-semibold">
+              {/* Avatar */}
+              <Avatar className="w-16 h-16 ring-4 ring-background shadow-xl flex-shrink-0">
+                <AvatarImage src={linkedinData?.profilePicture} alt={lead.name} className="object-cover" />
+                <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-primary/20 to-primary/10 text-primary">
                   {getInitials(lead.name)}
                 </AvatarFallback>
               </Avatar>
               
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <SheetTitle className="text-xl text-foreground truncate">
-                      {linkedinData?.fullName || lead.name}
-                    </SheetTitle>
-                    <p className="text-muted-foreground truncate">{lead.title}</p>
-                    {linkedinData?.headline && linkedinData.headline !== lead.title && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {linkedinData.headline}
-                      </p>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0 -mt-1 -mr-2">
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Social Stats & Verification */}
-                {isEnriched && (
-                  <div className="flex items-center gap-3 mt-2 flex-wrap">
-                    {linkedinData?.isVerified && (
-                      <span className="text-xs text-blue-500 flex items-center gap-1">
-                        <BadgeCheck className="w-3 h-3" />
-                        Verified
-                      </span>
-                    )}
-                    {linkedinData?.isPremium && (
-                      <span className="text-xs text-amber-500 flex items-center gap-1">
-                        <Crown className="w-3 h-3" />
-                        Premium
-                      </span>
-                    )}
-                    {linkedinData?.isCreator && (
-                      <span className="text-xs text-purple-500 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        Creator
-                      </span>
-                    )}
-                    {linkedinData?.isInfluencer && (
-                      <span className="text-xs text-orange-500 flex items-center gap-1">
-                        <Award className="w-3 h-3" />
-                        Influencer
-                      </span>
-                    )}
-                    {linkedinData?.connections && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {formatNumber(linkedinData.connections)}+ connections
-                      </span>
-                    )}
-                    {linkedinData?.followers && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {formatNumber(linkedinData.followers)} followers
-                      </span>
-                    )}
-                    {linkedinData?.totalExperienceYears && linkedinData.totalExperienceYears > 0 && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Briefcase className="w-3 h-3" />
-                        {Math.round(linkedinData.totalExperienceYears)}+ years exp.
-                      </span>
-                    )}
-                    {linkedinData?.firstRoleYear && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Since {linkedinData.firstRoleYear}
-                      </span>
-                    )}
-                  </div>
-                )}
+              <div className="flex-1 min-w-0 pt-1">
+                <h2 className="text-lg font-semibold text-foreground truncate tracking-tight">
+                  {linkedinData?.fullName || lead.name}
+                </h2>
+                <p className="text-sm text-muted-foreground truncate mt-0.5">
+                  {linkedinData?.headline || lead.title}
+                </p>
               </div>
             </div>
-          </SheetHeader>
 
-        <div className="py-6 px-6 space-y-6">
-          {/* Enrichment Status & Action */}
-          {linkedinUrl && (
-            <div className="glass rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {isEnriched ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <div>
-                        <span className="text-sm text-green-500 font-medium">LinkedIn Enriched</span>
-                        {enrichedAt && (
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(enrichedAt).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      <span className="text-sm text-muted-foreground">LinkedIn data available</span>
-                    </>
-                  )}
-                </div>
-                {!isEnriched && (
+            {/* Stats pills */}
+            {isEnriched && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {linkedinData?.isVerified && (
+                  <StatPill icon={BadgeCheck} color="blue">Verified</StatPill>
+                )}
+                {linkedinData?.isPremium && (
+                  <StatPill icon={Crown} color="amber">Premium</StatPill>
+                )}
+                {linkedinData?.connections && (
+                  <StatPill icon={Users} color="muted">{formatNumber(linkedinData.connections)}+</StatPill>
+                )}
+                {linkedinData?.totalExperienceYears && linkedinData.totalExperienceYears > 0 && (
+                  <StatPill icon={Briefcase} color="muted">{Math.round(linkedinData.totalExperienceYears)} yrs</StatPill>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-6 py-5 space-y-6">
+            
+            {/* Enrichment CTA */}
+            {linkedinUrl && !isEnriched && (
+              <div className="rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Enrich with LinkedIn</p>
+                      <p className="text-xs text-muted-foreground">Get full profile details</p>
+                    </div>
+                  </div>
                   <Button 
                     size="sm" 
                     onClick={handleEnrich}
                     disabled={isEnriching}
-                    className="gap-2"
+                    className="rounded-xl gap-2 px-4"
                   >
                     {isEnriching ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Enriching...
-                      </>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <>
-                        <Sparkles className="w-3 h-3" />
-                        Enrich Profile
-                      </>
+                      <ChevronRight className="w-4 h-4" />
                     )}
                   </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Enriched badge */}
+            {isEnriched && (
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-green-500 font-medium">LinkedIn Enriched</span>
+                {enrichedAt && (
+                  <span className="text-muted-foreground">· {new Date(enrichedAt).toLocaleDateString()}</span>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Score & Status */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 glass rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">Lead Score</p>
-              <p className="text-2xl font-bold text-primary">{lead.score}</p>
+            {/* Quick stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-muted/30 border border-border/50 p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Score</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{lead.score}</p>
+              </div>
+              <div className="rounded-2xl bg-muted/30 border border-border/50 p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
+                <Badge variant="outline" className="mt-2 capitalize font-medium">
+                  {lead.status}
+                </Badge>
+              </div>
             </div>
-            <div className="flex-1 glass rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">Status</p>
-              <Badge variant={statusVariants[lead.status] as any || 'new'} className="mt-1">
-                {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-              </Badge>
-            </div>
-          </div>
 
-          {/* LinkedIn Summary (if enriched) */}
-          {linkedinData?.summary && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Linkedin className="w-4 h-4 text-[#0077B5]" />
-                About
-              </h3>
-              <div className="glass rounded-lg p-3">
+            {/* About */}
+            {linkedinData?.summary && (
+              <Section>
+                <SectionHeader icon={Linkedin}>About</SectionHeader>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {linkedinData.summary}
                 </p>
-              </div>
-            </div>
-          )}
+              </Section>
+            )}
 
-          {/* Contact Info */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-foreground">Contact Information</h3>
-            <div className="space-y-2">
-              {(lead.email || linkedinData?.email) && (
-                <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                  <Mail className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-foreground">{lead.email || linkedinData?.email}</span>
-                  {linkedinData?.email && !lead.email && (
-                    <Badge variant="outline" className="text-xs">from LinkedIn</Badge>
-                  )}
-                </div>
-              )}
-              {(lead.phone || linkedinData?.mobileNumber) && (
-                <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                  <Phone className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-foreground">{lead.phone || linkedinData?.mobileNumber}</span>
-                  {linkedinData?.mobileNumber && !lead.phone && (
-                    <Badge variant="outline" className="text-xs">from LinkedIn</Badge>
-                  )}
-                </div>
-              )}
-              {linkedinUrl && (
-                <a 
-                  href={linkedinUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <Linkedin className="w-4 h-4 text-[#0077B5]" />
-                  <span className="text-sm text-foreground flex-1">View LinkedIn Profile</span>
-                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                </a>
-              )}
-            </div>
-          </div>
-
-          {/* Company Info */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-foreground">Company Details</h3>
-            <div className="space-y-2">
-              {(lead.company || linkedinData?.companyName) && (
-                <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="text-sm text-foreground">{lead.company || linkedinData?.companyName}</p>
-                    {(lead.industry || linkedinData?.companyIndustry) && (
-                      <p className="text-xs text-muted-foreground">
-                        {lead.industry || linkedinData?.companyIndustry}
-                        {linkedinData?.companySize && ` · ${linkedinData.companySize} employees`}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-              {(lead.location || linkedinData?.jobLocation) && (
-                <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-foreground">{lead.location || linkedinData?.jobLocation}</span>
-                </div>
-              )}
-              
-              {/* Company Website */}
-              {linkedinData?.companyWebsite && (
-                <a 
-                  href={linkedinData.companyWebsite.startsWith('http') ? linkedinData.companyWebsite : `https://${linkedinData.companyWebsite}`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <Globe className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-foreground flex-1 truncate">{linkedinData.companyWebsite}</span>
-                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                </a>
-              )}
-              
-              {/* Company LinkedIn */}
-              {linkedinData?.companyLinkedin && (
-                <a 
-                  href={linkedinData.companyLinkedin}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <Linkedin className="w-4 h-4 text-[#0077B5]" />
-                  <span className="text-sm text-foreground flex-1">Company LinkedIn</span>
-                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                </a>
-              )}
-              
-              {/* Job Duration */}
-              {linkedinData?.currentJobDuration && (
-                <div className="flex items-center gap-3 p-3 glass rounded-lg">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="text-sm text-foreground">Current role: {linkedinData.currentJobDuration}</p>
-                    {linkedinData?.jobStartedOn && (
-                      <p className="text-xs text-muted-foreground">
-                        Started {linkedinData.jobStartedOn}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Experience (if enriched) */}
-          {linkedinData?.experiences && linkedinData.experiences.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-muted-foreground" />
-                Experience ({linkedinData.experiences.length})
-              </h3>
+            {/* Contact */}
+            <Section>
+              <SectionHeader icon={Mail}>Contact</SectionHeader>
               <div className="space-y-2">
-                {linkedinData.experiences.slice(0, 5).map((exp, idx) => (
-                  <div key={idx} className="glass rounded-lg p-3">
-                    <div className="flex items-start gap-3">
-                      {/* Company Logo */}
-                      {exp.companyLogo ? (
-                        <img 
-                          src={exp.companyLogo} 
-                          alt={exp.companyName} 
-                          className="w-10 h-10 rounded object-cover flex-shrink-0 bg-muted"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                          <Building2 className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{exp.title}</p>
-                        <p className="text-xs text-muted-foreground">{exp.companyName}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {exp.startDate && (
-                            <span className="text-xs text-muted-foreground">
-                              {exp.startDate} - {exp.stillWorking ? 'Present' : exp.endDate || 'N/A'}
-                            </span>
-                          )}
-                          {exp.employmentType && (
-                            <Badge variant="outline" className="text-xs py-0 h-4">{exp.employmentType}</Badge>
-                          )}
-                        </div>
-                        {exp.location && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3" />
-                            {exp.location}
-                          </p>
-                        )}
-                        {exp.description && (
-                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                            {exp.description}
-                          </p>
-                        )}
+                {(lead.email || linkedinData?.email) && (
+                  <ItemCard>
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-4 h-4 text-primary flex-shrink-0" />
+                      <span className="text-sm text-foreground truncate">{lead.email || linkedinData?.email}</span>
+                    </div>
+                  </ItemCard>
+                )}
+                {(lead.phone || linkedinData?.mobileNumber) && (
+                  <ItemCard>
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-4 h-4 text-primary flex-shrink-0" />
+                      <span className="text-sm text-foreground">{lead.phone || linkedinData?.mobileNumber}</span>
+                    </div>
+                  </ItemCard>
+                )}
+                {linkedinUrl && (
+                  <a href={linkedinUrl} target="_blank" rel="noopener noreferrer">
+                    <ItemCard hover>
+                      <div className="flex items-center gap-3">
+                        <Linkedin className="w-4 h-4 text-[#0077B5] flex-shrink-0" />
+                        <span className="text-sm text-foreground flex-1">LinkedIn Profile</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
                       </div>
-                    </div>
-                  </div>
-                ))}
-                {linkedinData.experiences.length > 5 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    +{linkedinData.experiences.length - 5} more positions
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Education (if enriched) */}
-          {linkedinData?.educations && linkedinData.educations.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                Education ({linkedinData.educations.length})
-              </h3>
-              <div className="space-y-2">
-                {linkedinData.educations.slice(0, 4).map((edu, idx) => (
-                  <div key={idx} className="glass rounded-lg p-3">
-                    <div className="flex items-start gap-3">
-                      {/* School Logo */}
-                      {edu.logo ? (
-                        <img 
-                          src={edu.logo} 
-                          alt={edu.schoolName} 
-                          className="w-10 h-10 rounded object-cover flex-shrink-0 bg-muted"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                          <GraduationCap className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{edu.schoolName}</p>
-                        {(edu.degree || edu.fieldOfStudy) && (
-                          <p className="text-xs text-muted-foreground">
-                            {[edu.degree, edu.fieldOfStudy].filter(Boolean).join(' · ')}
-                          </p>
-                        )}
-                        {(edu.startYear && edu.startYear !== '0') || (edu.endYear && edu.endYear !== '0') ? (
-                          <p className="text-xs text-muted-foreground">
-                            {edu.startYear && edu.startYear !== '0' ? edu.startYear : ''} - {edu.endYear && edu.endYear !== '0' ? edu.endYear : ''}
-                          </p>
-                        ) : null}
-                        {edu.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {edu.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {linkedinData.educations.length > 4 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    +{linkedinData.educations.length - 4} more
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Certifications (if enriched) */}
-          {linkedinData?.certifications && linkedinData.certifications.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Award className="w-4 h-4 text-muted-foreground" />
-                Certifications ({linkedinData.certifications.length})
-              </h3>
-              <div className="space-y-2">
-                {linkedinData.certifications.slice(0, 4).map((cert, idx) => (
-                  <div key={idx} className="glass rounded-lg p-3">
-                    <p className="text-sm font-medium text-foreground">{cert.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {cert.authority && (
-                        <span className="text-xs text-muted-foreground">{cert.authority}</span>
-                      )}
-                      {cert.authority && cert.issueDate && (
-                        <span className="text-xs text-muted-foreground">·</span>
-                      )}
-                      {cert.issueDate && (
-                        <span className="text-xs text-muted-foreground">{cert.issueDate}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {linkedinData.certifications.length > 4 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    +{linkedinData.certifications.length - 4} more certifications
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Languages (if enriched) */}
-          {linkedinData?.languages && linkedinData.languages.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Languages className="w-4 h-4 text-muted-foreground" />
-                Languages
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {linkedinData.languages.map((lang, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {lang.name}
-                    {lang.proficiency && ` · ${lang.proficiency}`}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Skills (if enriched) */}
-          {linkedinData?.skills && linkedinData.skills.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-muted-foreground" />
-                Skills ({linkedinData.skills.length})
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {linkedinData.skills.slice(0, 12).map((skill, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {skill.title}
-                  </Badge>
-                ))}
-                {linkedinData.skills.length > 12 && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground">
-                    +{linkedinData.skills.length - 12} more
-                  </Badge>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Volunteer Experience (if enriched) */}
-          {linkedinData?.volunteerExperience && linkedinData.volunteerExperience.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Heart className="w-4 h-4 text-muted-foreground" />
-                Volunteer Experience
-              </h3>
-              <div className="space-y-2">
-                {linkedinData.volunteerExperience.slice(0, 3).map((vol, idx) => (
-                  <div key={idx} className="glass rounded-lg p-3">
-                    <p className="text-sm font-medium text-foreground">{vol.role}</p>
-                    <p className="text-xs text-muted-foreground">{vol.organization}</p>
-                    {vol.industry && (
-                      <Badge variant="outline" className="text-xs mt-1">{vol.industry}</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Related Profiles (if enriched) */}
-          {linkedinData?.relatedProfiles && linkedinData.relatedProfiles.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Users className="w-4 h-4 text-muted-foreground" />
-                People Also Viewed
-              </h3>
-              <div className="space-y-2">
-                {linkedinData.relatedProfiles.slice(0, 5).map((person, idx) => (
-                  <a
-                    key={idx}
-                    href={person.linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 glass rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={person.profilePicture} alt={person.name} />
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {person.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{person.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{person.headline}</p>
-                    </div>
-                    <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                    </ItemCard>
                   </a>
-                ))}
+                )}
               </div>
-            </div>
-          )}
+            </Section>
 
-          {/* Activity */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-foreground">Activity</h3>
-            <div className="glass rounded-lg p-3">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-foreground">
-                    Added on {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'Unknown'}
-                  </p>
-                  {lead.lastContact && (
-                    <p className="text-xs text-muted-foreground">
-                      Last contact: {new Date(lead.lastContact).toLocaleDateString()}
+            {/* Company */}
+            <Section>
+              <SectionHeader icon={Building2}>Company</SectionHeader>
+              <ItemCard>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{lead.company || linkedinData?.companyName}</p>
+                    {(lead.industry || linkedinData?.companyIndustry) && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {lead.industry || linkedinData?.companyIndustry}
+                        {linkedinData?.companySize && ` · ${linkedinData.companySize}`}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {(lead.location || linkedinData?.jobLocation) && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {lead.location || linkedinData?.jobLocation}
+                    </div>
+                  )}
+                  
+                  {linkedinData?.currentJobDuration && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="w-3.5 h-3.5" />
+                      {linkedinData.currentJobDuration} in role
+                    </div>
+                  )}
+
+                  {/* Links row */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                    {linkedinData?.companyWebsite && (
+                      <a 
+                        href={linkedinData.companyWebsite.startsWith('http') ? linkedinData.companyWebsite : `https://${linkedinData.companyWebsite}`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      >
+                        <Globe className="w-3 h-3" />
+                        Website
+                      </a>
+                    )}
+                    {linkedinData?.companyLinkedin && (
+                      <a 
+                        href={linkedinData.companyLinkedin}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-[#0077B5] hover:underline"
+                      >
+                        <Linkedin className="w-3 h-3" />
+                        LinkedIn
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </ItemCard>
+            </Section>
+
+            {/* Experience */}
+            {linkedinData?.experiences && linkedinData.experiences.length > 0 && (
+              <Section>
+                <SectionHeader icon={Briefcase} count={linkedinData.experiences.length}>Experience</SectionHeader>
+                <div className="space-y-2">
+                  {linkedinData.experiences.slice(0, 4).map((exp, idx) => (
+                    <ItemCard key={idx}>
+                      <div className="flex gap-3">
+                        {exp.companyLogo ? (
+                          <img 
+                            src={exp.companyLogo} 
+                            alt="" 
+                            className="w-10 h-10 rounded-lg object-cover bg-muted flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground leading-tight">{exp.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{exp.companyName}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-xs text-muted-foreground">
+                              {exp.startDate} – {exp.stillWorking ? 'Present' : exp.endDate}
+                            </span>
+                            {exp.employmentType && (
+                              <Badge variant="outline" className="text-[10px] py-0 h-4 px-1.5">{exp.employmentType}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </ItemCard>
+                  ))}
+                  {linkedinData.experiences.length > 4 && (
+                    <p className="text-xs text-muted-foreground text-center pt-1">
+                      +{linkedinData.experiences.length - 4} more
                     </p>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
+              </Section>
+            )}
 
-          {/* Exa Enrichment Insights */}
-          {exaEnrichments.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                AI Research Insights
-              </h3>
-              <div className="space-y-2">
-                {exaEnrichments.filter((e: any) => e.reasoning).slice(0, 3).map((enrichment: any, idx: number) => (
-                  <div key={idx} className="glass rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {enrichment.reasoning}
-                    </p>
-                    {enrichment.references && enrichment.references.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {enrichment.references.filter((r: any) => r.url).slice(0, 2).map((ref: any, refIdx: number) => (
-                          <a
-                            key={refIdx}
-                            href={ref.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            {ref.title || 'Source'}
-                          </a>
-                        ))}
+            {/* Education */}
+            {linkedinData?.educations && linkedinData.educations.length > 0 && (
+              <Section>
+                <SectionHeader icon={GraduationCap} count={linkedinData.educations.length}>Education</SectionHeader>
+                <div className="space-y-2">
+                  {linkedinData.educations.slice(0, 3).map((edu, idx) => (
+                    <ItemCard key={idx}>
+                      <div className="flex gap-3">
+                        {edu.logo ? (
+                          <img 
+                            src={edu.logo} 
+                            alt="" 
+                            className="w-10 h-10 rounded-lg object-cover bg-muted flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                            <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground leading-tight">{edu.schoolName}</p>
+                          {(edu.degree || edu.fieldOfStudy) && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                              {[edu.degree, edu.fieldOfStudy].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+                    </ItemCard>
+                  ))}
+                </div>
+              </Section>
+            )}
 
-          {/* Notes */}
-          {lead.notes && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground">Notes</h3>
-              <div className="glass rounded-lg p-3">
+            {/* Skills */}
+            {linkedinData?.skills && linkedinData.skills.length > 0 && (
+              <Section>
+                <SectionHeader icon={Sparkles} count={linkedinData.skills.length}>Skills</SectionHeader>
+                <div className="flex flex-wrap gap-1.5">
+                  {linkedinData.skills.slice(0, 10).map((skill, idx) => (
+                    <span 
+                      key={idx} 
+                      className="px-2.5 py-1 rounded-lg bg-muted/50 text-xs text-muted-foreground border border-border/50"
+                    >
+                      {skill.title}
+                    </span>
+                  ))}
+                  {linkedinData.skills.length > 10 && (
+                    <span className="px-2.5 py-1 rounded-lg bg-muted/30 text-xs text-muted-foreground">
+                      +{linkedinData.skills.length - 10}
+                    </span>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Certifications */}
+            {linkedinData?.certifications && linkedinData.certifications.length > 0 && (
+              <Section>
+                <SectionHeader icon={Award} count={linkedinData.certifications.length}>Certifications</SectionHeader>
+                <div className="space-y-2">
+                  {linkedinData.certifications.slice(0, 3).map((cert, idx) => (
+                    <ItemCard key={idx}>
+                      <p className="text-sm font-medium text-foreground">{cert.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {[cert.authority, cert.issueDate].filter(Boolean).join(' · ')}
+                      </p>
+                    </ItemCard>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Languages */}
+            {linkedinData?.languages && linkedinData.languages.length > 0 && (
+              <Section>
+                <SectionHeader icon={Languages}>Languages</SectionHeader>
+                <div className="flex flex-wrap gap-2">
+                  {linkedinData.languages.map((lang, idx) => (
+                    <span 
+                      key={idx} 
+                      className="px-3 py-1.5 rounded-xl bg-muted/50 text-xs text-foreground border border-border/50"
+                    >
+                      {lang.name}
+                    </span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Volunteer */}
+            {linkedinData?.volunteerExperience && linkedinData.volunteerExperience.length > 0 && (
+              <Section>
+                <SectionHeader icon={Heart}>Volunteer</SectionHeader>
+                <div className="space-y-2">
+                  {linkedinData.volunteerExperience.slice(0, 2).map((vol, idx) => (
+                    <ItemCard key={idx}>
+                      <p className="text-sm font-medium text-foreground">{vol.role}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{vol.organization}</p>
+                    </ItemCard>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Related profiles */}
+            {linkedinData?.relatedProfiles && linkedinData.relatedProfiles.length > 0 && (
+              <Section>
+                <SectionHeader icon={Users}>Similar Profiles</SectionHeader>
+                <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                  {linkedinData.relatedProfiles.slice(0, 5).map((person, idx) => (
+                    <a
+                      key={idx}
+                      href={person.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 w-24 text-center group"
+                    >
+                      <Avatar className="w-12 h-12 mx-auto ring-2 ring-border/50 group-hover:ring-primary/50 transition-all">
+                        <AvatarImage src={person.profilePicture} alt={person.name} />
+                        <AvatarFallback className="text-xs bg-muted">
+                          {person.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-xs font-medium text-foreground mt-2 truncate">{person.name.split(' ')[0]}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{person.headline?.split(' ')[0]}</p>
+                    </a>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* AI Insights */}
+            {exaEnrichments.filter((e: any) => e.reasoning).length > 0 && (
+              <Section>
+                <SectionHeader icon={Sparkles}>AI Insights</SectionHeader>
+                <div className="space-y-2">
+                  {exaEnrichments.filter((e: any) => e.reasoning).slice(0, 2).map((enrichment: any, idx: number) => (
+                    <ItemCard key={idx}>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                        {enrichment.reasoning}
+                      </p>
+                    </ItemCard>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Activity */}
+            <Section>
+              <SectionHeader icon={Calendar}>Activity</SectionHeader>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span>Added {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : '—'}</span>
+                {lead.lastContact && (
+                  <span>Last contact {new Date(lead.lastContact).toLocaleDateString()}</span>
+                )}
+              </div>
+            </Section>
+
+            {/* Notes */}
+            {lead.notes && (
+              <Section>
+                <SectionHeader icon={Calendar}>Notes</SectionHeader>
                 <p className="text-sm text-muted-foreground">{lead.notes}</p>
-              </div>
-            </div>
-          )}
+              </Section>
+            )}
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="px-6 py-4 border-t border-border flex gap-3">
-          <Button className="flex-1">
-            <Send className="w-4 h-4 mr-2" />
-            Send Outreach
-          </Button>
-          {(lead.email || linkedinData?.email) && (
-            <Button variant="outline" onClick={() => window.location.href = `mailto:${lead.email || linkedinData?.email}`}>
-              <Mail className="w-4 h-4" />
+        {/* Fixed footer */}
+        <div className="flex-shrink-0 px-6 py-4 border-t border-border/50 bg-background/80 backdrop-blur-sm">
+          <div className="flex gap-3">
+            <Button className="flex-1 rounded-xl h-11 gap-2 font-medium">
+              <Send className="w-4 h-4" />
+              Send Outreach
             </Button>
-          )}
-        </div>
+            {(lead.email || linkedinData?.email) && (
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="rounded-xl h-11 w-11"
+                onClick={() => window.location.href = `mailto:${lead.email || linkedinData?.email}`}
+              >
+                <Mail className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </SheetContent>
     </Sheet>
