@@ -12,10 +12,23 @@ import { useLeadSubscription } from '@/hooks/useLeadSubscription';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ArrowLeft, Sparkles, Target, Search, Check, Users, Zap, Eye } from 'lucide-react';
 
+interface CampaignData {
+  id?: string;
+  name: string;
+  goal?: string;
+  status?: string;
+  search_query?: string;
+  lead_count?: number;
+  sent_count?: number;
+  reply_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface CreateCampaignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: (campaignId?: string) => void;
+  onCreated: (campaignId?: string, campaignData?: CampaignData) => void;
 }
 
 type Step = 'name' | 'goal' | 'search' | 'saving' | 'processing';
@@ -74,6 +87,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
   const [isSearching, setIsSearching] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
+  const [createdCampaignData, setCreatedCampaignData] = useState<CampaignData | null>(null);
   const { toast } = useToast();
 
   // Real-time lead subscription
@@ -91,16 +105,21 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
     setIsSearching(false);
     setIsTransitioning(false);
     setCreatedCampaignId(null);
+    setCreatedCampaignData(null);
   }, []);
 
   const handleClose = () => {
     if (isSaving || isSearching) return;
+    // If we created a campaign, notify parent before closing
+    if (createdCampaignData) {
+      onCreated(createdCampaignId || undefined, createdCampaignData);
+    }
     resetState();
     onOpenChange(false);
   };
 
   const handleViewLeads = () => {
-    onCreated(createdCampaignId || undefined);
+    onCreated(createdCampaignId || undefined, createdCampaignData || undefined);
     resetState();
     onOpenChange(false);
   };
@@ -166,7 +185,19 @@ export function CreateCampaignDialog({ open, onOpenChange, onCreated }: CreateCa
       }
 
       const campaignId = campaignResult.campaign.id;
+      const campaignData: CampaignData = {
+        id: campaignId,
+        name: name.trim(),
+        goal: goal.trim(),
+        status: 'searching', // Will be set to searching after search starts
+        search_query: searchQuery.trim(),
+        lead_count: 0,
+        sent_count: 0,
+        reply_count: 0,
+        created_at: new Date().toISOString(),
+      };
       setCreatedCampaignId(campaignId);
+      setCreatedCampaignData(campaignData);
 
       const searchResult = await searchLeadsWithExa({
         query: searchQuery.trim(),
