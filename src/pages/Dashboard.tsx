@@ -151,7 +151,13 @@ export default function Index() {
     });
   };
 
-  const handleCampaignCreated = (campaignId?: string) => {
+  const handleCampaignCreated = (campaignId?: string, campaignData?: Campaign) => {
+    // Immediately add the new campaign to state for instant visibility
+    if (campaignData) {
+      setCampaigns(prev => [campaignData, ...prev]);
+    }
+    
+    // Also refresh data in background to ensure consistency
     loadData();
     setShowCreateCampaign(false);
     
