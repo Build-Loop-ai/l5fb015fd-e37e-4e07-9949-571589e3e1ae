@@ -78,47 +78,46 @@ export function useEmailConnection() {
           return;
         }
 
-        // Listen for the OAuth callback
-        const checkPopup = setInterval(async () => {
-          try {
-            if (popup.closed) {
-              clearInterval(checkPopup);
-              setIsConnecting(false);
-              // Refresh connection status after popup closes
-              await fetchConnection();
-              return;
-            }
+        // Listen for message from popup (more reliable than polling URL)
+        const handleMessage = async (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if (event.data?.type !== 'gmail-oauth') return;
+          
+          window.removeEventListener('message', handleMessage);
+          const code = event.data.code;
+          
+          if (code) {
+            try {
+              const { data: callbackData, error: callbackError } = await supabase.functions.invoke('gmail-auth', {
+                body: { action: 'callback', code, redirectUri },
+              });
 
-            // Check if popup has redirected to our callback URL (dashboard with code)
-            const popupUrl = popup.location.href;
-            if (popupUrl.includes(window.location.origin) && popupUrl.includes('code=')) {
-              clearInterval(checkPopup);
-              
-              const urlParams = new URLSearchParams(new URL(popupUrl).search);
-              const code = urlParams.get('code');
-              
-              popup.close();
+              if (callbackError) throw callbackError;
 
-              if (code) {
-                // Exchange code for tokens
-                const { data: callbackData, error: callbackError } = await supabase.functions.invoke('gmail-auth', {
-                  body: { action: 'callback', code, redirectUri },
-                });
-
-                if (callbackError) throw callbackError;
-
-                if (callbackData?.success) {
-                  toast.success(`Gmail connected: ${callbackData.email}`);
-                  await fetchConnection();
-                }
+              if (callbackData?.success) {
+                toast.success(`Gmail connected: ${callbackData.email}`);
+                await fetchConnection();
               }
-              
-              setIsConnecting(false);
+            } catch (err: any) {
+              console.error('Gmail callback error:', err);
+              toast.error(err.message || 'Failed to complete Gmail connection');
             }
-          } catch (e) {
-            // Cross-origin errors are expected until the popup redirects back
           }
-        }, 500);
+          
+          setIsConnecting(false);
+        };
+        
+        window.addEventListener('message', handleMessage);
+
+        // Also check if popup is closed manually
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener('message', handleMessage);
+            setIsConnecting(false);
+            fetchConnection(); // Refresh in case it connected
+          }
+        }, 1000);
       }
     } catch (error: any) {
       console.error('Gmail connect error:', error);
