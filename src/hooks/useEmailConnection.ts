@@ -55,8 +55,8 @@ export function useEmailConnection() {
     setIsConnecting(true);
 
     try {
-      // Get the OAuth URL from edge function
-      const redirectUri = `${window.location.origin}/settings`;
+      // Use /dashboard as redirect - it's a real route
+      const redirectUri = `${window.location.origin}/dashboard`;
       
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
         body: { action: 'authorize', redirectUri },
@@ -89,7 +89,7 @@ export function useEmailConnection() {
               return;
             }
 
-            // Check if popup has redirected to our callback URL
+            // Check if popup has redirected to our callback URL (dashboard with code)
             const popupUrl = popup.location.href;
             if (popupUrl.includes(window.location.origin) && popupUrl.includes('code=')) {
               clearInterval(checkPopup);
