@@ -59,8 +59,7 @@ export function useEmailConnection() {
       const redirectUri = `${window.location.origin}/settings`;
       
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
-        body: { redirectUri },
-        headers: { 'Content-Type': 'application/json' },
+        body: { action: 'authorize', redirectUri },
       });
 
       if (error) throw error;
@@ -103,8 +102,7 @@ export function useEmailConnection() {
               if (code) {
                 // Exchange code for tokens
                 const { data: callbackData, error: callbackError } = await supabase.functions.invoke('gmail-auth', {
-                  body: { code, redirectUri },
-                  headers: { 'Content-Type': 'application/json' },
+                  body: { action: 'callback', code, redirectUri },
                 });
 
                 if (callbackError) throw callbackError;
@@ -134,8 +132,7 @@ export function useEmailConnection() {
 
     try {
       const { error } = await supabase.functions.invoke('gmail-auth', {
-        body: {},
-        headers: { 'Content-Type': 'application/json' },
+        body: { action: 'disconnect' },
       });
 
       if (error) throw error;

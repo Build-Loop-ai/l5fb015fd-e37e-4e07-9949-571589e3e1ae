@@ -24,8 +24,8 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+    const body = await req.json().catch(() => ({}));
+    const action = body.action;
 
     console.log(`Gmail Auth - Action: ${action}`);
 
@@ -38,8 +38,6 @@ serve(async (req) => {
     }
 
     if (action === "authorize") {
-      // Get the redirect URI from request body
-      const body = await req.json();
       const redirectUri = body.redirectUri;
 
       if (!redirectUri) {
@@ -96,7 +94,6 @@ serve(async (req) => {
         );
       }
 
-      const body = await req.json();
       const { code, redirectUri } = body;
 
       if (!code || !redirectUri) {
