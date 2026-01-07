@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PricingPlans } from '@/components/PricingPlans';
 import { PLANS, PlanId } from '@/lib/plans';
+import { EmailConnectionCard } from '@/components/EmailConnectionCard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -350,11 +351,24 @@ export function SettingsPage() {
           </div>
         </SettingsSection>
 
+        {/* Email Integration Section */}
+        <SettingsSection 
+          title="Email Integration" 
+          description="Connect your email account to send outreach directly"
+          className="animate-fade-in stagger-3"
+        >
+          <EmailConnectionCard />
+          <p className="text-xs text-muted-foreground mt-4">
+            Connect your Gmail account to send personalized outreach emails directly from your own email address.
+            Replies will come back to your inbox.
+          </p>
+        </SettingsSection>
+
         {/* Notifications Section */}
         <SettingsSection 
           title="Notifications" 
           description="Control how and when you receive updates"
-          className="animate-fade-in stagger-3"
+          className="animate-fade-in stagger-4"
         >
           <div>
             <SettingRow 
@@ -417,7 +431,7 @@ export function SettingsPage() {
         <SettingsSection 
           title="Danger Zone" 
           description="Irreversible actions that affect your data"
-          className="animate-fade-in stagger-4 border-destructive/30"
+          className="animate-fade-in stagger-5 border-destructive/30"
         >
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-xl bg-destructive/5 border border-destructive/20">
