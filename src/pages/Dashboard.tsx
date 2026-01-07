@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { OAuthCallback } from '@/components/OAuthCallback';
 import { Sidebar } from '@/components/Sidebar';
 import { StatCard } from '@/components/StatCard';
 import { LeadTable } from '@/components/LeadTable';
@@ -39,10 +40,15 @@ export default function Index() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Handle checkout success/cancel and Gmail OAuth callback
+  // Detect if we're in a popup for OAuth callback
+  const isOAuthPopup = window.opener && searchParams.get('code');
+
+  // Handle checkout success/cancel
   useEffect(() => {
+    // Don't run checkout logic if we're in OAuth popup
+    if (isOAuthPopup) return;
+    
     const checkout = searchParams.get('checkout');
-    const gmailCode = searchParams.get('code');
     
     if (checkout === 'success') {
       toast({
@@ -50,7 +56,6 @@ export default function Index() {
         description: 'Your plan has been upgraded successfully.',
       });
       refreshSubscription();
-      // Clean up URL
       navigate('/dashboard', { replace: true });
     } else if (checkout === 'canceled') {
       toast({
@@ -58,12 +63,13 @@ export default function Index() {
         description: 'You can upgrade anytime from Settings.',
       });
       navigate('/dashboard', { replace: true });
-    } else if (gmailCode) {
-      // Gmail OAuth callback - the popup will handle this, just clean the URL if we're in main window
-      // This ensures if someone lands here directly, the URL is cleaned
-      navigate('/dashboard', { replace: true });
     }
-  }, [searchParams, toast, refreshSubscription, navigate]);
+  }, [searchParams, toast, refreshSubscription, navigate, isOAuthPopup]);
+
+  // If this is the OAuth popup, render the callback handler
+  if (isOAuthPopup) {
+    return <OAuthCallback />;
+  }
 
   // Redirect to auth if not logged in
   useEffect(() => {
