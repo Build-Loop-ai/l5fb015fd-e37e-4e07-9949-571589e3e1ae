@@ -5,6 +5,7 @@ import { SparkBurst, RingLoader, AbstractBlob } from '@/components/ui/visual-ele
 import { searchLeadsWithExa, saveLeads, Lead } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { LeadResultCard } from './LeadResultCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LeadFinderProps {
   onLeadsFound?: (leads: Lead[]) => void;
@@ -25,6 +26,10 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
   const [selectedLeads, setSelectedLeads] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState('');
   const { toast } = useToast();
+  const { subscription, subscriptionLoading } = useAuth();
+
+  const creditsRemaining = (subscription?.credits_limit || 0) - (subscription?.credits_used || 0);
+  const hasCredits = creditsRemaining > 0;
 
   const handleSearch = async () => {
     if (!query.trim()) {
@@ -75,11 +80,20 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
           });
         }
       } else {
-        toast({
-          title: 'Search failed',
-          description: result.error || 'Unable to start search. Please try again.',
-          variant: 'destructive',
-        });
+        // Handle NO_CREDITS error specifically
+        if (result.error === 'NO_CREDITS') {
+          toast({
+            title: 'No credits remaining',
+            description: 'You have used all your credits. Please upgrade your plan to continue.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Search failed',
+            description: result.error || 'Unable to start search. Please try again.',
+            variant: 'destructive',
+          });
+        }
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -214,10 +228,21 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
             </div>
           </div>
 
+          {/* Credits remaining indicator */}
+          {!subscriptionLoading && (
+            <p className="text-sm text-muted-foreground mt-4 text-center">
+              {hasCredits ? (
+                <>You have <span className="font-semibold text-foreground">{creditsRemaining}</span> credits remaining. Each search uses up to 10 credits.</>
+              ) : (
+                <span className="text-destructive font-medium">You have no credits remaining. Upgrade to continue searching.</span>
+              )}
+            </p>
+          )}
+
           <Button 
             onClick={handleSearch} 
-            disabled={isSearching}
-            className="w-full mt-8 h-16 text-base font-semibold rounded-2xl"
+            disabled={isSearching || !hasCredits}
+            className="w-full mt-6 h-16 text-base font-semibold rounded-2xl"
             size="lg"
           >
             {isSearching ? (
@@ -225,6 +250,8 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
                 <RingLoader className="w-5 h-5" />
                 Searching with AI...
               </span>
+            ) : !hasCredits ? (
+              'No Credits - Upgrade Plan'
             ) : (
               'Find Leads →'
             )}

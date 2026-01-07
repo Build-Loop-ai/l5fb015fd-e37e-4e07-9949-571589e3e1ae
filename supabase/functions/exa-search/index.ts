@@ -17,6 +17,20 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
+    // Get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    let userId: string | null = null;
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError) {
+        console.error('Auth error:', authError);
+      } else {
+        userId = user?.id || null;
+      }
+    }
+
     const { query, campaignId } = await req.json();
 
     const EXA_API_KEY = Deno.env.get('EXA_API_KEY');
@@ -26,6 +40,35 @@ Deno.serve(async (req) => {
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       throw new Error('Search query is required');
+    }
+
+    // Check credit limit before starting search
+    if (userId) {
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('credits_limit, credits_used')
+        .eq('user_id', userId)
+        .single();
+
+      if (subError) {
+        console.error('Error fetching subscription:', subError);
+      } else if (subscription) {
+        const availableCredits = subscription.credits_limit - (subscription.credits_used || 0);
+        console.log('Available credits:', availableCredits);
+
+        if (availableCredits <= 0) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'NO_CREDITS',
+            message: 'You have used all your credits. Please upgrade your plan.',
+            credits_used: subscription.credits_used,
+            credits_limit: subscription.credits_limit,
+          }), { 
+            status: 402, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
+      }
     }
 
     const searchQuery = query.trim();
