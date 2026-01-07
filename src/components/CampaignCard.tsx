@@ -91,12 +91,22 @@ export function CampaignCard({ campaign, onUpdate, onViewLeads, onFindMoreLeads,
   // Calculate displayed lead count (include real-time arrivals)
   const displayedLeadCount = (campaign.lead_count || 0) + newLeadsCount;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on buttons or dropdown
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[role="menuitem"]')) return;
+    onViewLeads?.(campaign);
+  };
+
   return (
-    <div className={cn(
-      'glass rounded-2xl p-7 card-shadow hover:shadow-elevated transition-all duration-500 group',
-      isSearching && 'ring-1 ring-primary/20',
-      className
-    )}>
+    <div 
+      className={cn(
+        'glass rounded-2xl p-7 card-shadow hover:shadow-elevated transition-all duration-500 group cursor-pointer',
+        isSearching && 'ring-1 ring-primary/20',
+        className
+      )}
+      onClick={handleCardClick}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0">
