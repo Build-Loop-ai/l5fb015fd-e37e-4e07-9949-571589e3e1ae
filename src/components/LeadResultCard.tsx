@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RingLoader } from '@/components/ui/visual-elements';
@@ -11,6 +11,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { useEmailConnection } from '@/hooks/useEmailConnection';
+import { Send, Loader2, AlertCircle } from 'lucide-react';
 
 interface LeadResultCardProps {
   lead: Lead;
@@ -23,7 +26,19 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
   const [isGenerating, setIsGenerating] = useState(false);
   const [outreach, setOutreach] = useState<GeneratedOutreach | null>(null);
   const [showOutreachDialog, setShowOutreachDialog] = useState(false);
+  const [editedSubject, setEditedSubject] = useState('');
+  const [editedBody, setEditedBody] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
+  const { isConnected, sendEmail } = useEmailConnection();
+
+  // Sync edited values when outreach is generated
+  useEffect(() => {
+    if (outreach) {
+      setEditedSubject(outreach.subject);
+      setEditedBody(outreach.body);
+    }
+  }, [outreach]);
 
   const handleGenerateOutreach = async () => {
     setIsGenerating(true);
@@ -38,7 +53,7 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
         setShowOutreachDialog(true);
         toast({
           title: 'Outreach generated!',
-          description: 'Personalized message ready to send',
+          description: 'Personalized message ready to edit and send',
         });
       } else {
         toast({
@@ -56,6 +71,46 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!isConnected) {
+      toast({
+        title: 'Gmail not connected',
+        description: 'Please connect your Gmail account first in Settings',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      // TEST: Send to luukalleman@gmail.com instead of actual lead email
+      const result = await sendEmail({
+        leadId: lead.id,
+        to: 'luukalleman@gmail.com', // TEST OVERRIDE - change to lead.email for production
+        subject: editedSubject,
+        body: editedBody,
+        campaignId: lead.campaign_id,
+      });
+
+      if (result.success) {
+        setShowOutreachDialog(false);
+        toast({
+          title: 'Email sent!',
+          description: `Successfully sent to luukalleman@gmail.com (test mode)`,
+        });
+      }
+    } catch (error) {
+      console.error('Send error:', error);
+      toast({
+        title: 'Send failed',
+        description: 'Failed to send email. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -191,6 +246,20 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
 
           {outreach && (
             <div className="space-y-6 mt-4">
+              {/* Gmail connection warning */}
+              {!isConnected && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <p className="text-sm">Connect your Gmail in Settings to send emails directly.</p>
+                </div>
+              )}
+
+              {/* Test mode notice */}
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
+                <Send className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm">Test mode: Emails will be sent to <strong>luukalleman@gmail.com</strong></p>
+              </div>
+
               {/* Email Subject */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -198,15 +267,18 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(outreach.subject, 'Subject')}
+                    onClick={() => copyToClipboard(editedSubject, 'Subject')}
                     className="h-8 rounded-lg"
                   >
                     Copy
                   </Button>
                 </div>
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/50 text-foreground font-medium">
-                  {outreach.subject}
-                </div>
+                <Input
+                  value={editedSubject}
+                  onChange={(e) => setEditedSubject(e.target.value)}
+                  className="bg-muted/30 border-border/50 rounded-xl"
+                  placeholder="Email subject..."
+                />
               </div>
 
               {/* Email Body */}
@@ -216,16 +288,17 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(outreach.body, 'Email body')}
+                    onClick={() => copyToClipboard(editedBody, 'Email body')}
                     className="h-8 rounded-lg"
                   >
                     Copy
                   </Button>
                 </div>
                 <Textarea
-                  value={outreach.body}
-                  readOnly
+                  value={editedBody}
+                  onChange={(e) => setEditedBody(e.target.value)}
                   className="min-h-[150px] bg-muted/30 border-border/50 resize-none rounded-xl"
+                  placeholder="Email body..."
                 />
               </div>
 
@@ -249,16 +322,36 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
                 />
               </div>
 
-              {/* Open LinkedIn */}
-              {lead.linkedin_url && (
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
                 <Button
-                  variant="outline"
-                  className="w-full rounded-xl"
-                  onClick={() => window.open(lead.linkedin_url, '_blank')}
+                  onClick={handleSendEmail}
+                  disabled={isSending || !isConnected}
+                  className="flex-1 rounded-xl gap-2"
                 >
-                  Open LinkedIn Profile →
+                  {isSending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Email
+                    </>
+                  )}
                 </Button>
-              )}
+                
+                {lead.linkedin_url && (
+                  <Button
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => window.open(lead.linkedin_url, '_blank')}
+                  >
+                    Open LinkedIn →
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>

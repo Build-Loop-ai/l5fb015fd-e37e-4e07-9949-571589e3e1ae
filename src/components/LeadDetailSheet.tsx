@@ -93,6 +93,10 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
   const [localProfileData, setLocalProfileData] = useState<any>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
+  const [showOutreachDialog, setShowOutreachDialog] = useState(false);
+  const [generatedOutreach, setGeneratedOutreach] = useState<GeneratedOutreach | null>(null);
+  const [editedSubject, setEditedSubject] = useState('');
+  const [editedBody, setEditedBody] = useState('');
   const { isConnected, sendEmail } = useEmailConnection();
 
   // Sync local state when lead changes or when sheet opens
@@ -101,6 +105,14 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
       setLocalProfileData(lead.profile_data || lead.profileData || null);
     }
   }, [lead?.id, lead?.profile_data, lead?.profileData, open]);
+
+  // Sync edited values when outreach is generated
+  useEffect(() => {
+    if (generatedOutreach) {
+      setEditedSubject(generatedOutreach.subject);
+      setEditedBody(generatedOutreach.body);
+    }
+  }, [generatedOutreach]);
 
   if (!lead) return null;
 
@@ -595,15 +607,9 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
           )}
           <div className="flex gap-3">
             <Button 
-              className="flex-1 rounded-xl h-11 gap-2 font-medium"
-              disabled={!isConnected || isSendingEmail || isGeneratingOutreach || !(lead.email || linkedinData?.email)}
+              className="flex-1 gap-2 rounded-xl h-11"
+              disabled={!isConnected || isGeneratingOutreach}
               onClick={async () => {
-                const recipientEmail = lead.email || linkedinData?.email;
-                if (!recipientEmail) {
-                  toast.error('No email address available for this lead');
-                  return;
-                }
-                
                 setIsGeneratingOutreach(true);
                 try {
                   // Generate outreach first
@@ -613,25 +619,13 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                     return;
                   }
                   
-                  setIsGeneratingOutreach(false);
-                  setIsSendingEmail(true);
-                  
-                  // Send the email
-                  const result = await sendEmail({
-                    leadId: lead.id,
-                    to: recipientEmail,
-                    subject: outreachResult.outreach.subject,
-                    body: outreachResult.outreach.body,
-                  });
-                  
-                  if (result.success) {
-                    onLeadUpdated?.();
-                  }
+                  // Show editable dialog instead of sending immediately
+                  setGeneratedOutreach(outreachResult.outreach);
+                  setShowOutreachDialog(true);
                 } catch (error) {
-                  toast.error('Failed to send outreach');
+                  toast.error('Failed to generate outreach');
                 } finally {
                   setIsGeneratingOutreach(false);
-                  setIsSendingEmail(false);
                 }
               }}
             >
@@ -640,15 +634,10 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Generating...
                 </>
-              ) : isSendingEmail ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Sending...
-                </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  Send Outreach
+                  Generate Outreach
                 </>
               )}
             </Button>
@@ -664,6 +653,90 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
             )}
           </div>
         </div>
+
+        {/* Outreach Edit Dialog */}
+        {showOutreachDialog && generatedOutreach && (
+          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border/50">
+              <h3 className="font-semibold text-foreground">Edit & Send Outreach</h3>
+              <button 
+                onClick={() => setShowOutreachDialog(false)}
+                className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Test mode notice */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
+                <Send className="w-4 h-4 flex-shrink-0" />
+                <p className="text-xs">Test mode: Sending to <strong>luukalleman@gmail.com</strong></p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Subject</label>
+                <input
+                  type="text"
+                  value={editedSubject}
+                  onChange={(e) => setEditedSubject(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Body</label>
+                <textarea
+                  value={editedBody}
+                  onChange={(e) => setEditedBody(e.target.value)}
+                  rows={10}
+                  className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border/50 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border/50">
+              <Button
+                className="w-full gap-2 rounded-xl h-11"
+                disabled={isSendingEmail}
+                onClick={async () => {
+                  setIsSendingEmail(true);
+                  try {
+                    // TEST: Send to luukalleman@gmail.com
+                    const result = await sendEmail({
+                      leadId: lead.id,
+                      to: 'luukalleman@gmail.com', // TEST OVERRIDE
+                      subject: editedSubject,
+                      body: editedBody,
+                    });
+
+                    if (result.success) {
+                      toast.success('Email sent to luukalleman@gmail.com (test mode)');
+                      setShowOutreachDialog(false);
+                      onLeadUpdated?.();
+                    }
+                  } catch (error) {
+                    toast.error('Failed to send email');
+                  } finally {
+                    setIsSendingEmail(false);
+                  }
+                }}
+              >
+                {isSendingEmail ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send Email
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
