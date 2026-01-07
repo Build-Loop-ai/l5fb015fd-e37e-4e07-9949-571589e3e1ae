@@ -89,12 +89,12 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
   const [isEnriching, setIsEnriching] = useState(false);
   const [localProfileData, setLocalProfileData] = useState<any>(null);
 
-  // Reset local state when lead changes
+  // Sync local state when lead changes or when sheet opens
   useEffect(() => {
-    if (lead) {
+    if (lead && open) {
       setLocalProfileData(lead.profile_data || lead.profileData || null);
     }
-  }, [lead?.id]);
+  }, [lead?.id, lead?.profile_data, lead?.profileData, open]);
 
   if (!lead) return null;
 
