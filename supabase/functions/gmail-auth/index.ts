@@ -24,8 +24,17 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json().catch(() => ({}));
-    const action = body.action;
+    const url = new URL(req.url);
+    const rawBody = await req.text();
+    let body: Record<string, any> = {};
+    if (rawBody) {
+      try {
+        body = JSON.parse(rawBody);
+      } catch {
+        body = {};
+      }
+    }
+    const action = body.action ?? url.searchParams.get("action");
 
     console.log(`Gmail Auth - Action: ${action}`);
 
@@ -232,7 +241,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: "Invalid action" }),
+      JSON.stringify({ error: "Invalid action", received: action ?? null }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
