@@ -39,9 +39,11 @@ export default function Index() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Handle checkout success/cancel
+  // Handle checkout success/cancel and Gmail OAuth callback
   useEffect(() => {
     const checkout = searchParams.get('checkout');
+    const gmailCode = searchParams.get('code');
+    
     if (checkout === 'success') {
       toast({
         title: 'Subscription activated!',
@@ -55,6 +57,10 @@ export default function Index() {
         title: 'Checkout canceled',
         description: 'You can upgrade anytime from Settings.',
       });
+      navigate('/dashboard', { replace: true });
+    } else if (gmailCode) {
+      // Gmail OAuth callback - the popup will handle this, just clean the URL if we're in main window
+      // This ensures if someone lands here directly, the URL is cleaned
       navigate('/dashboard', { replace: true });
     }
   }, [searchParams, toast, refreshSubscription, navigate]);
