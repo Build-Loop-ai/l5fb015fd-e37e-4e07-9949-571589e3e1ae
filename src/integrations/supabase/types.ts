@@ -101,6 +101,45 @@ export type Database = {
           },
         ]
       }
+      email_connections: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          provider: string
+          refresh_token: string
+          token_expires_at: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          refresh_token: string
+          token_expires_at: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          refresh_token?: string
+          token_expires_at?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           campaign_id: string | null
@@ -335,6 +374,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      increment_campaign_sent: {
+        Args: { p_campaign_id: string }
+        Returns: undefined
+      }
       increment_credits_used: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined

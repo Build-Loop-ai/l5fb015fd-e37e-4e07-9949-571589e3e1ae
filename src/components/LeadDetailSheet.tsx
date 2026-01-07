@@ -30,10 +30,13 @@ import {
   BadgeCheck,
   Crown,
   Heart,
-  ChevronRight
+  ChevronRight,
+  AlertCircle
 } from 'lucide-react';
 import { enrichLeadWithLinkedIn, LinkedInProfile } from '@/lib/api';
 import { toast } from 'sonner';
+import { useEmailConnection } from '@/hooks/useEmailConnection';
+import { generateOutreach, GeneratedOutreach } from '@/lib/api';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
@@ -88,6 +91,9 @@ const StatPill = ({ icon: Icon, children, color = "muted" }: { icon: any; childr
 export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDetailSheetProps) {
   const [isEnriching, setIsEnriching] = useState(false);
   const [localProfileData, setLocalProfileData] = useState<any>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
+  const { isConnected, sendEmail } = useEmailConnection();
 
   // Sync local state when lead changes or when sheet opens
   useEffect(() => {
@@ -581,10 +587,70 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
 
         {/* Fixed footer */}
         <div className="flex-shrink-0 px-6 py-4 border-t border-border/50 bg-background/80 backdrop-blur-sm">
+          {!isConnected && (
+            <div className="flex items-center gap-2 text-xs text-amber-500 mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>Connect your Gmail in Settings to send emails</span>
+            </div>
+          )}
           <div className="flex gap-3">
-            <Button className="flex-1 rounded-xl h-11 gap-2 font-medium">
-              <Send className="w-4 h-4" />
-              Send Outreach
+            <Button 
+              className="flex-1 rounded-xl h-11 gap-2 font-medium"
+              disabled={!isConnected || isSendingEmail || isGeneratingOutreach || !(lead.email || linkedinData?.email)}
+              onClick={async () => {
+                const recipientEmail = lead.email || linkedinData?.email;
+                if (!recipientEmail) {
+                  toast.error('No email address available for this lead');
+                  return;
+                }
+                
+                setIsGeneratingOutreach(true);
+                try {
+                  // Generate outreach first
+                  const outreachResult = await generateOutreach({ lead });
+                  if (!outreachResult.success || !outreachResult.outreach) {
+                    toast.error(outreachResult.error || 'Failed to generate outreach');
+                    return;
+                  }
+                  
+                  setIsGeneratingOutreach(false);
+                  setIsSendingEmail(true);
+                  
+                  // Send the email
+                  const result = await sendEmail({
+                    leadId: lead.id,
+                    to: recipientEmail,
+                    subject: outreachResult.outreach.subject,
+                    body: outreachResult.outreach.body,
+                  });
+                  
+                  if (result.success) {
+                    onLeadUpdated?.();
+                  }
+                } catch (error) {
+                  toast.error('Failed to send outreach');
+                } finally {
+                  setIsGeneratingOutreach(false);
+                  setIsSendingEmail(false);
+                }
+              }}
+            >
+              {isGeneratingOutreach ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : isSendingEmail ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Send Outreach
+                </>
+              )}
             </Button>
             {(lead.email || linkedinData?.email) && (
               <Button 
