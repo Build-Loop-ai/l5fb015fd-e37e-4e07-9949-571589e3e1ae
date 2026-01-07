@@ -87,13 +87,15 @@ serve(async (req) => {
     let planId = 'free';
     let planName = 'Free';
     let creditsLimit = 10;
-    let subscriptionEnd = null;
-    let stripeSubscriptionId = null;
+    let subscriptionEnd: string | null = null;
+    let stripeSubscriptionId: string | null = null;
+    let resetCredits = false;
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       stripeSubscriptionId = subscription.id;
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
       
       const productId = subscription.items.data[0].price.product as string;
       const planConfig = PLANS[productId as keyof typeof PLANS];
@@ -110,31 +112,60 @@ serve(async (req) => {
         planId, 
         creditsLimit 
       });
+
+      // Check if this is a new billing period (to reset credits)
+      const { data: existingSub } = await supabaseClient
+        .from('subscriptions')
+        .select('current_period_start, credits_used')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingSub?.current_period_start && existingSub.current_period_start !== periodStart) {
+        logStep("New billing period detected, credits will be reset");
+        // Credits will be reset in the upsert below
+        resetCredits = true;
+      }
     }
 
-    // Get current credits used from database
-    const { data: subData } = await supabaseClient
-      .from('subscriptions')
-      .select('credits_used')
-      .eq('user_id', user.id)
-      .single();
+    // Get current credits used from database (unless resetting)
+    let creditsUsed = 0;
+    if (!resetCredits) {
+      const { data: subData } = await supabaseClient
+        .from('subscriptions')
+        .select('credits_used')
+        .eq('user_id', user.id)
+        .single();
+      creditsUsed = subData?.credits_used || 0;
+    }
 
-    const creditsUsed = subData?.credits_used || 0;
+    // Get the current period start for saving
+    const currentPeriodStart = hasActiveSub 
+      ? new Date(subscriptions.data[0].current_period_start * 1000).toISOString()
+      : null;
 
     // Update subscription record
+    const upsertData: Record<string, unknown> = {
+      user_id: user.id,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: stripeSubscriptionId,
+      plan_id: planId,
+      status: hasActiveSub ? 'active' : 'inactive',
+      credits_limit: creditsLimit,
+      current_period_end: subscriptionEnd,
+      current_period_start: currentPeriodStart,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Reset credits if new billing period
+    if (resetCredits) {
+      upsertData.credits_used = 0;
+    }
+
     await supabaseClient
       .from('subscriptions')
-      .upsert({
-        user_id: user.id,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: stripeSubscriptionId,
-        plan_id: planId,
-        status: hasActiveSub ? 'active' : 'inactive',
-        credits_limit: creditsLimit,
-        current_period_end: subscriptionEnd,
-      }, { onConflict: 'user_id' });
+      .upsert(upsertData, { onConflict: 'user_id' });
 
-    logStep("Subscription data updated in database");
+    logStep("Subscription data updated in database", { resetCredits });
 
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,

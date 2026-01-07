@@ -146,6 +146,45 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Increment credits used for the user
+      if (userId && savedCount > 0) {
+        console.log(`Incrementing credits by ${savedCount} for user ${userId}`);
+        
+        const { error: creditError } = await supabase.rpc('increment_credits_used', {
+          p_user_id: userId,
+          p_amount: savedCount,
+        });
+
+        if (creditError) {
+          console.error('Error incrementing credits:', creditError);
+        } else {
+          console.log('Credits incremented successfully');
+        }
+
+        // Get subscription ID for credit_usage logs
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        // Log credit usage
+        if (subscription) {
+          const { error: logError } = await supabase
+            .from('credit_usage')
+            .insert({
+              user_id: userId,
+              subscription_id: subscription.id,
+              credits_used: savedCount,
+              description: `${savedCount} leads discovered via Exa search`,
+            });
+
+          if (logError) {
+            console.error('Error logging credit usage:', logError);
+          }
+        }
+      }
+
       // Update search record
       await supabase
         .from('webset_searches')
