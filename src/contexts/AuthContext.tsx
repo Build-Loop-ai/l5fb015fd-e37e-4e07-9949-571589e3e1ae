@@ -83,6 +83,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Fetch subscription for existing session on initial load
+      if (session?.user) {
+        supabase.functions.invoke('check-subscription', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }).then(({ data, error }) => {
+          if (!error && data) {
+            setSubscription(data);
+          }
+        });
+      }
     });
 
     return () => authSubscription.unsubscribe();
