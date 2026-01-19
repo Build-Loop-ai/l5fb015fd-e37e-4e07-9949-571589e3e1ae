@@ -24,6 +24,7 @@ import {
 import { Lead as LegacyLead } from '@/types/lead';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscriptionRealtime } from '@/hooks/useSubscriptionRealtime';
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -39,6 +40,9 @@ export default function Index() {
   const { user, loading: authLoading, refreshSubscription } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Subscribe to realtime subscription changes for credit updates
+  useSubscriptionRealtime();
 
   // Detect if we're in a popup for OAuth callback
   const isOAuthPopup = window.opener && searchParams.get('code');
