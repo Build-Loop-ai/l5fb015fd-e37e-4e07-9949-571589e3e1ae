@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
-  const refreshSubscription = async () => {
+  const refreshSubscription = useCallback(async () => {
     if (!session) {
       setSubscription(null);
       return;
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setSubscriptionLoading(false);
     }
-  };
+  }, [session?.access_token]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const interval = setInterval(refreshSubscription, 60000);
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, refreshSubscription]);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
