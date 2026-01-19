@@ -52,7 +52,17 @@ serve(async (req) => {
     if (customers.data.length === 0) {
       logStep("No customer found, returning free tier");
       
-      // Update subscription record in database
+      // Fetch existing credits_used from database (preserve actual usage)
+      const { data: existingSub } = await supabaseClient
+        .from('subscriptions')
+        .select('credits_used')
+        .eq('user_id', user.id)
+        .single();
+      
+      const creditsUsed = existingSub?.credits_used || 0;
+      logStep("Fetched existing credits for free tier", { creditsUsed });
+      
+      // Update subscription record in database (don't reset credits_used)
       await supabaseClient
         .from('subscriptions')
         .upsert({
@@ -60,6 +70,7 @@ serve(async (req) => {
           plan_id: 'free',
           status: 'active',
           credits_limit: 10,
+          updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
       return new Response(JSON.stringify({
@@ -67,7 +78,7 @@ serve(async (req) => {
         plan_id: 'free',
         plan_name: 'Free',
         credits_limit: 10,
-        credits_used: 0,
+        credits_used: creditsUsed,  // Use actual value from DB
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,

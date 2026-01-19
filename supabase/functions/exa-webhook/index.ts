@@ -49,6 +49,25 @@ Deno.serve(async (req) => {
         console.error('Error fetching search record:', searchError);
       }
 
+      // IDEMPOTENCY CHECK: Skip if already processed
+      if (searchRecord?.status === 'completed') {
+        console.log('Webset already processed, skipping:', websetId);
+        return new Response(JSON.stringify({ success: true, skipped: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Mark as processing_webhook immediately to prevent race conditions
+      const { error: lockError } = await supabase
+        .from('webset_searches')
+        .update({ status: 'processing_webhook' })
+        .eq('webset_id', websetId)
+        .eq('status', 'processing');  // Only update if still in 'processing' state
+
+      if (lockError) {
+        console.log('Could not acquire lock (likely already processing):', lockError);
+      }
+
       const campaignId = searchRecord?.campaign_id || null;
       const userId = (searchRecord?.campaigns as any)?.user_id || null;
 
