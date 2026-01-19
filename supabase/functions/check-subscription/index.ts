@@ -51,38 +51,53 @@ serve(async (req) => {
 
     if (customers.data.length === 0) {
       logStep("No customer found, returning free tier");
-      
-      // Fetch existing credits_used from database (preserve actual usage)
+
+      // Fetch current row so we can avoid writing when nothing changes
       const { data: existingSub } = await supabaseClient
         .from('subscriptions')
-        .select('credits_used')
+        .select('plan_id, status, credits_limit, credits_used')
         .eq('user_id', user.id)
         .single();
-      
+
       const creditsUsed = existingSub?.credits_used || 0;
       logStep("Fetched existing credits for free tier", { creditsUsed });
-      
-      // Update subscription record in database (don't reset credits_used)
-      await supabaseClient
-        .from('subscriptions')
-        .upsert({
-          user_id: user.id,
-          plan_id: 'free',
-          status: 'active',
-          credits_limit: 10,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' });
 
-      return new Response(JSON.stringify({
-        subscribed: false,
-        plan_id: 'free',
-        plan_name: 'Free',
-        credits_limit: 10,
-        credits_used: creditsUsed,  // Use actual value from DB
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+      const needsUpdate =
+        !existingSub ||
+        existingSub.plan_id !== 'free' ||
+        existingSub.status !== 'active' ||
+        existingSub.credits_limit !== 10;
+
+      if (needsUpdate) {
+        await supabaseClient
+          .from('subscriptions')
+          .upsert(
+            {
+              user_id: user.id,
+              plan_id: 'free',
+              status: 'active',
+              credits_limit: 10,
+            },
+            { onConflict: 'user_id' }
+          );
+        logStep("Subscription row updated for free tier");
+      } else {
+        logStep("No changes for free tier, skipping database update");
+      }
+
+      return new Response(
+        JSON.stringify({
+          subscribed: false,
+          plan_id: 'free',
+          plan_name: 'Free',
+          credits_limit: 10,
+          credits_used: creditsUsed,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     }
 
     const customerId = customers.data[0].id;
@@ -163,29 +178,59 @@ serve(async (req) => {
       ? new Date(subscriptions.data[0].current_period_start * 1000).toISOString()
       : null;
 
-    // Update subscription record
-    const upsertData: Record<string, unknown> = {
+    // Update subscription record (ONLY write if something actually changed)
+    const desiredStatus = hasActiveSub ? 'active' : 'inactive';
+
+    const desired: Record<string, unknown> = {
       user_id: user.id,
       stripe_customer_id: customerId,
       stripe_subscription_id: stripeSubscriptionId,
       plan_id: planId,
-      status: hasActiveSub ? 'active' : 'inactive',
+      status: desiredStatus,
       credits_limit: creditsLimit,
       current_period_end: subscriptionEnd,
       current_period_start: currentPeriodStart,
-      updated_at: new Date().toISOString(),
     };
 
-    // Reset credits if new billing period
-    if (resetCredits) {
-      upsertData.credits_used = 0;
-    }
-
-    await supabaseClient
+    const { data: existingRow } = await supabaseClient
       .from('subscriptions')
-      .upsert(upsertData, { onConflict: 'user_id' });
+      .select(
+        'stripe_customer_id, stripe_subscription_id, plan_id, status, credits_limit, credits_used, current_period_end, current_period_start'
+      )
+      .eq('user_id', user.id)
+      .single();
 
-    logStep("Subscription data updated in database", { resetCredits });
+    const desiredCreditsUsed = resetCredits ? 0 : (existingRow?.credits_used ?? creditsUsed);
+
+    const needsUpdate =
+      !existingRow ||
+      existingRow.stripe_customer_id !== desired.stripe_customer_id ||
+      existingRow.stripe_subscription_id !== desired.stripe_subscription_id ||
+      existingRow.plan_id !== desired.plan_id ||
+      existingRow.status !== desired.status ||
+      existingRow.credits_limit !== desired.credits_limit ||
+      (existingRow.current_period_end ?? null) !== (desired.current_period_end ?? null) ||
+      (existingRow.current_period_start ?? null) !== (desired.current_period_start ?? null) ||
+      (resetCredits && existingRow.credits_used !== 0);
+
+    if (needsUpdate) {
+      const upsertData: Record<string, unknown> = {
+        ...desired,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (resetCredits) {
+        upsertData.credits_used = 0;
+      }
+
+      await supabaseClient
+        .from('subscriptions')
+        .upsert(upsertData, { onConflict: 'user_id' });
+
+      logStep("Subscription data updated in database", { resetCredits });
+    } else {
+      logStep("No subscription changes detected, skipping database update");
+    }
 
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
