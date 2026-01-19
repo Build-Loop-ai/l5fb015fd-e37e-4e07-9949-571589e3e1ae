@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,22 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import {
   Users,
   DollarSign,
-  Target,
   RefreshCw,
-  ArrowLeft,
   TrendingUp,
   Mail,
   Search,
-  CreditCard,
-  BarChart3,
   MessageSquare,
   CheckCircle,
-  Clock,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { PlanDistributionChart } from '@/components/admin/PlanDistributionChart';
 import { TimeSeriesChart } from '@/components/admin/TimeSeriesChart';
 import { LeadStatusChart } from '@/components/admin/LeadStatusChart';
+import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import {
   PulseOrb,
   SparkBurst,
@@ -93,28 +90,21 @@ function AdminSection({
   title,
   description,
   children,
-  delay = 0,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
-  delay?: number;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="space-y-4"
-    >
+    <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
       </div>
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -195,7 +185,10 @@ function ContactCard({ contact, index, onMarkRead }: { contact: any; index: numb
             </span>
             {isNew && (
               <button
-                onClick={() => onMarkRead(contact.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkRead(contact.id);
+                }}
                 className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 <CheckCircle className="w-3.5 h-3.5" />
@@ -211,9 +204,10 @@ function ContactCard({ contact, index, onMarkRead }: { contact: any; index: numb
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, session } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading, stats, refetch } = useAdminCheck();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Show loading while auth or admin check is in progress
   if (authLoading || loading) {
@@ -262,122 +256,31 @@ export default function AdminDashboard() {
     }
   };
 
-  // Prepare recent activity data
-  const recentActivities = [
-    ...stats.recentActivity.signups.slice(0, 3).map((signup: any) => ({
-      type: 'signup' as const,
-      title: signup.email || 'New User',
-      subtitle: 'New signup',
-      timestamp: signup.created_at,
-    })),
-    ...stats.recentActivity.leads.slice(0, 3).map((lead: any) => ({
-      type: 'lead' as const,
-      title: lead.name,
-      subtitle: lead.company || 'Lead found',
-      timestamp: lead.created_at,
-    })),
-  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 6);
-
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Background effects */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_hsl(var(--primary)_/_0.05)_0%,_transparent_50%)]" />
-      <div className="fixed top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/dashboard')}
-              className="hover:bg-muted/50"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
-                <BarChart3 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-foreground">Admin Dashboard</h1>
-                <p className="text-xs text-muted-foreground">
-                  Updated {format(new Date(stats.generatedAt), 'h:mm a')}
-                </p>
-              </div>
-            </div>
-          </div>
-          <Button onClick={refetch} className="apple-button-secondary h-10">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
-      </header>
-
-      <main className="relative z-10 mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        {/* KPI Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <AdminStatCard
-            title="Total Users"
-            value={stats.overview.totalUsers}
-            subtitle={`+${stats.overview.usersLast7Days} this week`}
-            trend={stats.overview.userGrowthRate}
-            visual={PulseOrb}
-            delay={0}
-          />
-          <AdminStatCard
-            title="Monthly Revenue"
-            value={`$${stats.overview.mrr.toLocaleString()}`}
-            subtitle={`${stats.subscriptions.paidUsers} paid subscribers`}
-            icon={DollarSign}
-            delay={0.1}
-          />
-          <AdminStatCard
-            title="Total Leads"
-            value={stats.overview.totalLeads.toLocaleString()}
-            subtitle={`+${stats.overview.leadsLast7Days} this week`}
-            visual={TargetRings}
-            delay={0.2}
-          />
-          <AdminStatCard
-            title="Conversion Rate"
-            value={`${stats.subscriptions.conversionRate}%`}
-            subtitle="Free to Paid"
-            visual={SparkBurst}
-            delay={0.3}
-          />
-        </div>
-
-        {/* Contact Submissions - Prominent Section */}
-        {stats.contactSubmissions && stats.contactSubmissions.total > 0 && (
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'contacts':
+        return (
           <motion.div
+            key="contacts"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="action-card p-6"
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="visual-badge">
-                  <ChatBubbles className="w-7 h-7" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Contact Submissions</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.contactSubmissions.new} new • {stats.contactSubmissions.total} total
-                  </p>
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Contact Submissions</h2>
+                <p className="text-sm text-muted-foreground">
+                  {stats.contactSubmissions?.new || 0} new • {stats.contactSubmissions?.total || 0} total
+                </p>
               </div>
-              {stats.contactSubmissions.new > 0 && (
-                <Badge className="bg-primary/20 text-primary border border-primary/30">
-                  {stats.contactSubmissions.new} New
-                </Badge>
-              )}
+              <Button onClick={refetch} className="apple-button-secondary h-10">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              {stats.contactSubmissions.items.slice(0, 4).map((contact: any, index: number) => (
+              {stats.contactSubmissions?.items?.map((contact: any, index: number) => (
                 <ContactCard
                   key={contact.id}
                   contact={contact}
@@ -385,188 +288,356 @@ export default function AdminDashboard() {
                   onMarkRead={handleMarkRead}
                 />
               ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Secondary Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <AdminStatCard
-            title="Active Campaigns"
-            value={stats.overview.activeCampaigns}
-            subtitle={`${stats.campaigns.total} total`}
-            visual={StackedBars}
-            delay={0.5}
-          />
-          <AdminStatCard
-            title="Emails Sent"
-            value={stats.campaigns.emailsSent.toLocaleString()}
-            subtitle={`${stats.campaigns.replyRate}% reply rate`}
-            icon={Mail}
-            delay={0.6}
-          />
-          <AdminStatCard
-            title="Searches"
-            value={stats.searches.completed}
-            subtitle={`${stats.searches.processing} processing`}
-            icon={Search}
-            delay={0.7}
-          />
-          <AdminStatCard
-            title="Credits Used"
-            value={stats.credits.totalUsed.toLocaleString()}
-            subtitle={`${stats.credits.utilizationRate}% utilization`}
-            visual={DataFlow}
-            delay={0.8}
-          />
-        </div>
-
-        {/* Charts Section */}
-        <Tabs defaultValue="growth" className="space-y-4">
-          <TabsList className="bg-card/50 border border-border/50">
-            <TabsTrigger value="growth">User Growth</TabsTrigger>
-            <TabsTrigger value="leads">Lead Generation</TabsTrigger>
-            <TabsTrigger value="credits">Credit Usage</TabsTrigger>
-          </TabsList>
-          <TabsContent value="growth" className="stat-card p-6">
-            <AdminSection title="User Signups" description="New users over the last 30 days">
-              <TimeSeriesChart
-                data={stats.charts.dailySignups}
-                color="hsl(330, 100%, 63%)"
-                gradientId="signupsGradient"
-              />
-            </AdminSection>
-          </TabsContent>
-          <TabsContent value="leads" className="stat-card p-6">
-            <AdminSection title="Leads Found" description="Leads generated over the last 30 days">
-              <TimeSeriesChart
-                data={stats.charts.dailyLeads}
-                color="hsl(160, 70%, 42%)"
-                gradientId="leadsGradient"
-              />
-            </AdminSection>
-          </TabsContent>
-          <TabsContent value="credits" className="stat-card p-6">
-            <AdminSection title="Credits Consumed" description="Credit usage over the last 30 days">
-              <TimeSeriesChart
-                data={stats.charts.dailyCredits}
-                color="hsl(280, 87%, 65%)"
-                gradientId="creditsGradient"
-              />
-            </AdminSection>
-          </TabsContent>
-        </Tabs>
-
-        {/* Two Column Layout */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Plan Distribution */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
-            className="stat-card p-6"
-          >
-            <AdminSection title="Plan Distribution" description="Breakdown by subscription tier">
-              <PlanDistributionChart planCounts={stats.subscriptions.planCounts} />
-              <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-muted-foreground">{stats.subscriptions.planCounts.free}</p>
-                  <p className="text-xs text-muted-foreground">Free</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-blue-400">{stats.subscriptions.planCounts.starter}</p>
-                  <p className="text-xs text-muted-foreground">Starter</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-purple-400">{stats.subscriptions.planCounts.growth}</p>
-                  <p className="text-xs text-muted-foreground">Growth</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-emerald-400">{stats.subscriptions.planCounts.scale}</p>
-                  <p className="text-xs text-muted-foreground">Scale</p>
-                </div>
-              </div>
-            </AdminSection>
-          </motion.div>
-
-          {/* Lead Funnel */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 1 }}
-            className="stat-card p-6"
-          >
-            <AdminSection title="Lead Funnel" description="Leads by status">
-              <LeadStatusChart statusCounts={stats.leads.statusCounts} />
-              <div className="mt-4 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Avg per user: <span className="font-medium text-foreground">{stats.leads.avgPerUser}</span>
-                </span>
-                <span className="text-muted-foreground">
-                  Replies: <span className="font-medium text-foreground">{stats.campaigns.replies}</span>
-                </span>
-              </div>
-            </AdminSection>
-          </motion.div>
-        </div>
-
-        {/* Users Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.1 }}
-          className="stat-card p-6"
-        >
-          <AdminSection
-            title="All Users"
-            description={`${stats.users.length} registered users`}
-          >
-            <div className="space-y-3 max-h-[500px] overflow-y-auto">
-              {stats.users.map((user: any, index: number) => (
-                <UserRow key={user.id} user={user} index={index} />
-              ))}
-              {stats.users.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Users className="w-12 h-12 text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">No users yet</p>
+              {(!stats.contactSubmissions?.items || stats.contactSubmissions.items.length === 0) && (
+                <div className="col-span-2 stat-card p-12 flex flex-col items-center justify-center">
+                  <MessageSquare className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground">No contact submissions yet</p>
                 </div>
               )}
             </div>
-          </AdminSection>
-        </motion.div>
+          </motion.div>
+        );
 
-        {/* Top Users */}
-        {stats.topUsers.byLeads.length > 0 && (
+      case 'users':
+        return (
           <motion.div
+            key="users"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 1.2 }}
-            className="stat-card p-6"
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
           >
-            <AdminSection title="Top Users by Leads" description="Most active lead generators">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                {stats.topUsers.byLeads.map((user: any, index: number) => (
-                  <motion.div
-                    key={user.userId}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/30 p-4"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-sm font-bold text-primary">
-                      #{index + 1}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{user.fullName || user.email}</p>
-                      <p className="text-xs text-primary">{user.leadCount} leads</p>
-                    </div>
-                  </motion.div>
-                ))}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">All Users</h2>
+                <p className="text-sm text-muted-foreground">{stats.users.length} registered users</p>
               </div>
-            </AdminSection>
+              <Button onClick={refetch} className="apple-button-secondary h-10">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+            <div className="stat-card p-6">
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {stats.users.map((userItem: any, index: number) => (
+                  <UserRow key={userItem.id} user={userItem} index={index} />
+                ))}
+                {stats.users.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Users className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground">No users yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </motion.div>
-        )}
-      </main>
+        );
+
+      case 'revenue':
+        return (
+          <motion.div
+            key="revenue"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Revenue</h2>
+                <p className="text-sm text-muted-foreground">Financial overview</p>
+              </div>
+              <Button onClick={refetch} className="apple-button-secondary h-10">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <AdminStatCard
+                title="Monthly Revenue"
+                value={`$${stats.overview.mrr.toLocaleString()}`}
+                subtitle={`${stats.subscriptions.paidUsers} paid subscribers`}
+                icon={DollarSign}
+                delay={0}
+              />
+              <AdminStatCard
+                title="Paid Users"
+                value={stats.subscriptions.paidUsers}
+                subtitle={`${stats.subscriptions.conversionRate}% conversion`}
+                visual={SparkBurst}
+                delay={0.1}
+              />
+              <AdminStatCard
+                title="Credits Sold"
+                value={stats.credits.totalUsed.toLocaleString()}
+                subtitle={`${stats.credits.utilizationRate}% utilization`}
+                visual={DataFlow}
+                delay={0.2}
+              />
+            </div>
+            <div className="stat-card p-6">
+              <AdminSection title="Plan Distribution" description="Breakdown by subscription tier">
+                <PlanDistributionChart planCounts={stats.subscriptions.planCounts} />
+                <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-muted-foreground">{stats.subscriptions.planCounts.free}</p>
+                    <p className="text-xs text-muted-foreground">Free</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-blue-400">{stats.subscriptions.planCounts.starter}</p>
+                    <p className="text-xs text-muted-foreground">Starter</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-purple-400">{stats.subscriptions.planCounts.growth}</p>
+                    <p className="text-xs text-muted-foreground">Growth</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-emerald-400">{stats.subscriptions.planCounts.scale}</p>
+                    <p className="text-xs text-muted-foreground">Scale</p>
+                  </div>
+                </div>
+              </AdminSection>
+            </div>
+          </motion.div>
+        );
+
+      case 'analytics':
+        return (
+          <motion.div
+            key="analytics"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
+                <p className="text-sm text-muted-foreground">Performance metrics over time</p>
+              </div>
+              <Button onClick={refetch} className="apple-button-secondary h-10">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+            <Tabs defaultValue="growth" className="space-y-4">
+              <TabsList className="bg-card/50 border border-border/50">
+                <TabsTrigger value="growth">User Growth</TabsTrigger>
+                <TabsTrigger value="leads">Lead Generation</TabsTrigger>
+                <TabsTrigger value="credits">Credit Usage</TabsTrigger>
+              </TabsList>
+              <TabsContent value="growth" className="stat-card p-6">
+                <AdminSection title="User Signups" description="New users over the last 30 days">
+                  <TimeSeriesChart
+                    data={stats.charts.dailySignups}
+                    color="hsl(330, 100%, 63%)"
+                    gradientId="signupsGradient"
+                  />
+                </AdminSection>
+              </TabsContent>
+              <TabsContent value="leads" className="stat-card p-6">
+                <AdminSection title="Leads Found" description="Leads generated over the last 30 days">
+                  <TimeSeriesChart
+                    data={stats.charts.dailyLeads}
+                    color="hsl(160, 70%, 42%)"
+                    gradientId="leadsGradient"
+                  />
+                </AdminSection>
+              </TabsContent>
+              <TabsContent value="credits" className="stat-card p-6">
+                <AdminSection title="Credits Consumed" description="Credit usage over the last 30 days">
+                  <TimeSeriesChart
+                    data={stats.charts.dailyCredits}
+                    color="hsl(280, 87%, 65%)"
+                    gradientId="creditsGradient"
+                  />
+                </AdminSection>
+              </TabsContent>
+            </Tabs>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="stat-card p-6">
+                <AdminSection title="Lead Funnel" description="Leads by status">
+                  <LeadStatusChart statusCounts={stats.leads.statusCounts} />
+                </AdminSection>
+              </div>
+              {stats.topUsers.byLeads.length > 0 && (
+                <div className="stat-card p-6">
+                  <AdminSection title="Top Users by Leads" description="Most active lead generators">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {stats.topUsers.byLeads.slice(0, 4).map((topUser: any, index: number) => (
+                        <motion.div
+                          key={topUser.userId}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/30 p-4"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-sm font-bold text-primary">
+                            #{index + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{topUser.fullName || topUser.email}</p>
+                            <p className="text-xs text-primary">{topUser.leadCount} leads</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </AdminSection>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        );
+
+      default: // overview
+        return (
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Overview</h2>
+                <p className="text-sm text-muted-foreground">
+                  Updated {format(new Date(stats.generatedAt), 'h:mm a')}
+                </p>
+              </div>
+              <Button onClick={refetch} className="apple-button-secondary h-10">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+
+            {/* KPI Cards */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <AdminStatCard
+                title="Total Users"
+                value={stats.overview.totalUsers}
+                subtitle={`+${stats.overview.usersLast7Days} this week`}
+                trend={stats.overview.userGrowthRate}
+                visual={PulseOrb}
+                delay={0}
+              />
+              <AdminStatCard
+                title="Monthly Revenue"
+                value={`$${stats.overview.mrr.toLocaleString()}`}
+                subtitle={`${stats.subscriptions.paidUsers} paid subscribers`}
+                icon={DollarSign}
+                delay={0.1}
+              />
+              <AdminStatCard
+                title="Total Leads"
+                value={stats.overview.totalLeads.toLocaleString()}
+                subtitle={`+${stats.overview.leadsLast7Days} this week`}
+                visual={TargetRings}
+                delay={0.2}
+              />
+              <AdminStatCard
+                title="Conversion Rate"
+                value={`${stats.subscriptions.conversionRate}%`}
+                subtitle="Free to Paid"
+                visual={SparkBurst}
+                delay={0.3}
+              />
+            </div>
+
+            {/* Contact Submissions - Prominent Section */}
+            {stats.contactSubmissions && stats.contactSubmissions.total > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="action-card p-6 cursor-pointer hover:border-primary/40 transition-all"
+                onClick={() => setActiveTab('contacts')}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="visual-badge">
+                      <ChatBubbles className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">Contact Submissions</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {stats.contactSubmissions.new} new • {stats.contactSubmissions.total} total
+                      </p>
+                    </div>
+                  </div>
+                  {stats.contactSubmissions.new > 0 && (
+                    <Badge className="bg-primary/20 text-primary border border-primary/30">
+                      {stats.contactSubmissions.new} New
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {stats.contactSubmissions.items.slice(0, 2).map((contact: any, index: number) => (
+                    <ContactCard
+                      key={contact.id}
+                      contact={contact}
+                      index={index}
+                      onMarkRead={handleMarkRead}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Secondary Stats */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <AdminStatCard
+                title="Active Campaigns"
+                value={stats.overview.activeCampaigns}
+                subtitle={`${stats.campaigns.total} total`}
+                visual={StackedBars}
+                delay={0.5}
+              />
+              <AdminStatCard
+                title="Emails Sent"
+                value={stats.campaigns.emailsSent.toLocaleString()}
+                subtitle={`${stats.campaigns.replyRate}% reply rate`}
+                icon={Mail}
+                delay={0.6}
+              />
+              <AdminStatCard
+                title="Searches"
+                value={stats.searches.completed}
+                subtitle={`${stats.searches.processing} processing`}
+                icon={Search}
+                delay={0.7}
+              />
+              <AdminStatCard
+                title="Credits Used"
+                value={stats.credits.totalUsed.toLocaleString()}
+                subtitle={`${stats.credits.utilizationRate}% utilization`}
+                visual={DataFlow}
+                delay={0.8}
+              />
+            </div>
+          </motion.div>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex w-full">
+      <AdminSidebar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        stats={stats}
+      />
+      
+      {/* Main Content */}
+      <div className="flex-1 pl-72">
+        {/* Background effects */}
+        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_hsl(var(--primary)_/_0.05)_0%,_transparent_50%)] pointer-events-none" />
+        <div className="fixed top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        
+        <main className="relative z-10 p-8 space-y-8">
+          {renderContent()}
+        </main>
+      </div>
     </div>
   );
 }
