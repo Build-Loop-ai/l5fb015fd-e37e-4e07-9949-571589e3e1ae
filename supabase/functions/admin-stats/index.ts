@@ -100,6 +100,12 @@ serve(async (req) => {
       .from('outreach_messages')
       .select('*');
 
+    // Get all contact submissions
+    const { data: contactSubmissions, error: contactError } = await adminClient
+      .from('contact_submissions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
     // Calculate metrics
     const totalUsers = profiles?.length || 0;
     const usersLast7Days = profiles?.filter(p => new Date(p.created_at) >= sevenDaysAgo).length || 0;
@@ -308,6 +314,11 @@ serve(async (req) => {
       },
       topUsers: {
         byLeads: topUsersByLeads,
+      },
+      contactSubmissions: {
+        total: contactSubmissions?.length || 0,
+        new: contactSubmissions?.filter(c => c.status === 'new').length || 0,
+        items: contactSubmissions?.slice(0, 20) || [],
       },
       generatedAt: new Date().toISOString(),
     };
