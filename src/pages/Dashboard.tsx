@@ -44,6 +44,17 @@ export default function Index() {
   // Subscribe to realtime subscription changes for credit updates
   useSubscriptionRealtime();
 
+  // Refresh subscription when tab regains focus (e.g., after checkout in new tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Window focused, refreshing subscription');
+      refreshSubscription();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshSubscription]);
+
   // Detect if we're in a popup for OAuth callback
   const isOAuthPopup = window.opener && searchParams.get('code');
 
