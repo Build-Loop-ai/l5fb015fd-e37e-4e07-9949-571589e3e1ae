@@ -15,13 +15,13 @@ export function useSubscriptionRealtime() {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',  // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'subscriptions',
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('Subscription updated via realtime:', payload);
+          console.log('Subscription changed via realtime:', payload);
           refreshSubscription();
         }
       )

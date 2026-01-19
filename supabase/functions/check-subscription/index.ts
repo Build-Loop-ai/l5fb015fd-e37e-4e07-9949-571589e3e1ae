@@ -124,16 +124,25 @@ serve(async (req) => {
         creditsLimit 
       });
 
-      // Check if this is a new billing period (to reset credits)
+      // Check if this is a new billing period OR plan upgrade (to reset credits)
       const { data: existingSub } = await supabaseClient
         .from('subscriptions')
-        .select('current_period_start, credits_used')
+        .select('current_period_start, credits_used, plan_id')
         .eq('user_id', user.id)
         .single();
 
+      // Reset credits on new billing period
       if (existingSub?.current_period_start && existingSub.current_period_start !== periodStart) {
         logStep("New billing period detected, credits will be reset");
-        // Credits will be reset in the upsert below
+        resetCredits = true;
+      }
+      
+      // Reset credits on plan upgrade (give users fresh start with new plan)
+      if (existingSub?.plan_id && existingSub.plan_id !== planId) {
+        logStep("Plan change detected, credits will be reset", { 
+          from: existingSub.plan_id, 
+          to: planId 
+        });
         resetCredits = true;
       }
     }
