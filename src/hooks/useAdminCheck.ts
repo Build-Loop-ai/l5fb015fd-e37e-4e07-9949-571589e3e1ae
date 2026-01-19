@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,12 +98,13 @@ export function useAdminCheck() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { user, session } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const fetchAdminStats = async () => {
+  const fetchAdminStats = useCallback(async () => {
     if (!session?.access_token) {
+      console.log('No session access token available');
       setLoading(false);
       setIsAdmin(false);
       return;
@@ -112,12 +113,15 @@ export function useAdminCheck() {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching admin stats...');
 
       const { data, error: fetchError } = await supabase.functions.invoke('admin-stats', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
+
+      console.log('Admin stats response:', { data, fetchError });
 
       if (fetchError) {
         console.error('Admin stats error:', fetchError);
@@ -155,16 +159,27 @@ export function useAdminCheck() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.access_token, navigate, toast]);
 
   useEffect(() => {
-    if (user && session) {
-      fetchAdminStats();
-    } else if (!user) {
+    // Wait for auth to finish loading before checking admin status
+    if (authLoading) {
+      console.log('Auth still loading, waiting...');
+      return;
+    }
+
+    if (!user) {
+      console.log('No user, redirecting to auth');
       setLoading(false);
       navigate('/auth');
+      return;
     }
-  }, [user, session]);
 
-  return { isAdmin, loading, stats, error, refetch: fetchAdminStats };
+    if (session) {
+      console.log('User and session available, fetching admin stats');
+      fetchAdminStats();
+    }
+  }, [user, session, authLoading, fetchAdminStats, navigate]);
+
+  return { isAdmin, loading: loading || authLoading, stats, error, refetch: fetchAdminStats };
 }
