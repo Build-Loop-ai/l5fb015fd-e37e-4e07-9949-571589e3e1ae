@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
@@ -31,12 +30,7 @@ export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading, stats, refetch } = useAdminCheck();
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-    }
-  }, [user, authLoading, navigate]);
-
+  // Show loading while auth or admin check is in progress
   if (authLoading || loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -48,8 +42,15 @@ export default function AdminDashboard() {
     );
   }
 
+  // Redirect to auth if not logged in (after loading complete)
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
+
+  // Will redirect via useAdminCheck if not admin
   if (!isAdmin || !stats) {
-    return null; // Will redirect via useAdminCheck
+    return null;
   }
 
   // Prepare recent activity data
