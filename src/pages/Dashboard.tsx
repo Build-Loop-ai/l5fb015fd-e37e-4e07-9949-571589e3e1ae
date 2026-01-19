@@ -180,6 +180,41 @@ export default function Index() {
     }
   };
 
+  const handleLeadUpdated = async () => {
+    // Refresh all data from the database
+    const leadsResult = await getLeads();
+    if (leadsResult.success && leadsResult.leads) {
+      setDbLeads(leadsResult.leads);
+      
+      // If a lead is currently selected, update it with fresh data
+      if (selectedLead) {
+        const freshLead = leadsResult.leads.find(l => l.id === selectedLead.id);
+        if (freshLead) {
+          // Convert to LegacyLead format and update selectedLead
+          const updatedLead: LegacyLead = {
+            id: freshLead.id || '',
+            name: freshLead.name,
+            email: freshLead.email || '',
+            company: freshLead.company || '',
+            title: freshLead.title || '',
+            status: (freshLead.status as LegacyLead['status']) || 'new',
+            score: freshLead.profile_data?.exa_score ? Math.round(freshLead.profile_data.exa_score * 100) : 75,
+            lastContact: freshLead.updated_at || null,
+            tags: freshLead.industry ? [freshLead.industry] : [],
+            phone: freshLead.phone,
+            linkedin: freshLead.linkedin_url,
+            notes: freshLead.profile_data?.summary,
+            location: freshLead.location,
+            industry: freshLead.industry || '',
+            createdAt: freshLead.created_at || new Date().toISOString(),
+            profile_data: freshLead.profile_data,
+          };
+          setSelectedLead(updatedLead);
+        }
+      }
+    }
+  };
+
   const handleStatusChange = async (leadId: string, newStatus: string) => {
     const result = await updateLeadStatus(leadId, newStatus);
     if (result.success) {
@@ -505,6 +540,7 @@ export default function Index() {
         lead={selectedLead}
         open={!!selectedLead}
         onClose={() => setSelectedLead(null)}
+        onLeadUpdated={handleLeadUpdated}
       />
 
       <CreateCampaignDialog
