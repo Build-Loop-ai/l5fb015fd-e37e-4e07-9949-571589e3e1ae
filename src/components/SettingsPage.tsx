@@ -125,6 +125,7 @@ export function SettingsPage() {
   const currentPlan = PLANS[subscription?.plan_id as PlanId] || PLANS.free;
   const creditsUsed = subscription?.credits_used || 0;
   const creditsLimit = subscription?.credits_limit || currentPlan.credits;
+  const creditsRemaining = Math.max(0, creditsLimit - creditsUsed);
   const creditsPercentage = Math.min((creditsUsed / creditsLimit) * 100, 100);
 
   const handleSaveProfile = () => {
@@ -294,7 +295,7 @@ export function SettingsPage() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {creditsLimit - creditsUsed} credits remaining this month
+                    {creditsRemaining} credits remaining this month
                   </p>
                 </div>
 

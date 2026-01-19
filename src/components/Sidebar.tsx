@@ -77,7 +77,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const currentPlan = PLANS[subscription?.plan_id as PlanId] || PLANS.free;
   const creditsUsed = subscription?.credits_used || 0;
   const creditsLimit = subscription?.credits_limit || currentPlan.credits;
-  const creditsPercentage = Math.min((creditsUsed / creditsLimit) * 100, 100);
+  // Clamp percentage to 100% max (even if over limit)
+  const creditsPercentage = creditsLimit > 0 ? Math.min((creditsUsed / creditsLimit) * 100, 100) : 0;
 
   const handleSignOut = async () => {
     await signOut();
