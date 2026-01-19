@@ -1,8 +1,9 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { ContactDialog } from '@/components/ContactDialog';
 import { 
   PulseOrb, 
   SparkBurst, 
@@ -190,6 +191,7 @@ function StepItem({ number, title, description, index }: { number: number; title
 export default function Landing() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [isContactOpen, setIsContactOpen] = useState(false);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -263,6 +265,12 @@ export default function Landing() {
                       {link.label}
                     </a>
                   ))}
+                  <button
+                    onClick={() => setIsContactOpen(true)}
+                    className="relative px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-white/[0.04]"
+                  >
+                    Contact
+                  </button>
                 </div>
               </div>
               
@@ -531,7 +539,12 @@ export default function Landing() {
           <div className="flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
             <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+            <button 
+              onClick={() => setIsContactOpen(true)} 
+              className="hover:text-foreground transition-colors"
+            >
+              Contact
+            </button>
           </div>
           
           <p className="text-sm text-muted-foreground">
@@ -539,6 +552,9 @@ export default function Landing() {
           </p>
         </div>
       </footer>
+
+      {/* Contact Dialog */}
+      <ContactDialog isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
     </div>
   );
 }

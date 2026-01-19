@@ -90,6 +90,19 @@ interface AdminStats {
   topUsers: {
     byLeads: Array<{ userId: string; email: string; fullName: string | null; leadCount: number }>;
   };
+  contactSubmissions: {
+    total: number;
+    new: number;
+    items: Array<{
+      id: string;
+      name: string;
+      email: string;
+      company: string | null;
+      message: string;
+      status: string;
+      created_at: string;
+    }>;
+  };
   generatedAt: string;
 }
 
