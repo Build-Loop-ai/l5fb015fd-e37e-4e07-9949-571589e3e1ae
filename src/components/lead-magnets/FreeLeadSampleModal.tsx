@@ -110,12 +110,12 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 bg-background/80 backdrop-blur-2xl border-border/30 shadow-2xl shadow-primary/10">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:w-full sm:max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 bg-background/80 backdrop-blur-2xl border-border/30 shadow-2xl shadow-primary/10">
         {/* Decorative header gradient */}
         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
         
-        <div className="relative p-6">
+        <div className="relative p-6 overflow-x-hidden">
           <DialogHeader className="text-center pb-2">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -355,14 +355,14 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
                 className="space-y-4 mt-6"
               >
                 {/* Results header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 min-w-0">
                       <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      <span className="text-sm font-medium text-primary">{leads.length} leads found</span>
+                      <span className="text-sm font-medium text-primary truncate">{leads.length} leads found</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/30">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/30 shrink-0">
                     <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Details locked</span>
                   </div>
