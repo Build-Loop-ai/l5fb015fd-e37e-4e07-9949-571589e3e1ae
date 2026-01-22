@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { InlineAlert, FieldError } from '@/components/ui/inline-alert';
 import { supabase } from '@/integrations/supabase/client';
 import { GlowDot } from '@/components/ui/visual-elements';
+import { mapAuthError } from '@/hooks/useInlineError';
 import { z } from 'zod';
 import { ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
 
@@ -17,9 +19,9 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,16 +46,17 @@ export default function ResetPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldError(null);
 
     // Validate password
     const passwordResult = passwordSchema.safeParse(password);
     if (!passwordResult.success) {
-      setError(passwordResult.error.errors[0].message);
+      setFieldError(passwordResult.error.errors[0].message);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setFieldError('Passwords do not match');
       return;
     }
 
@@ -65,18 +68,9 @@ export default function ResetPassword() {
       });
 
       if (updateError) {
-        setError(updateError.message);
-        toast({
-          title: 'Error',
-          description: updateError.message,
-          variant: 'destructive',
-        });
+        setError(mapAuthError(updateError));
       } else {
         setSuccess(true);
-        toast({
-          title: 'Password updated!',
-          description: 'Your password has been successfully reset.',
-        });
         // Redirect to dashboard after 2 seconds
         setTimeout(() => navigate('/dashboard'), 2000);
       }
@@ -91,16 +85,22 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
-          <div className="glass-strong rounded-3xl p-8 card-shadow">
-            <h2 className="text-2xl font-bold text-foreground mb-4">Invalid Reset Link</h2>
-            <p className="text-muted-foreground mb-6">
-              This password reset link is invalid or has expired. Please request a new one.
-            </p>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-strong rounded-3xl p-8 card-shadow"
+          >
+            <InlineAlert
+              variant="warning"
+              title="Invalid Reset Link"
+              message="This password reset link is invalid or has expired. Please request a new one."
+              className="mb-6"
+            />
             <Button onClick={() => navigate('/auth')} className="apple-button">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Sign In
             </Button>
-          </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -110,16 +110,20 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
-          <div className="glass-strong rounded-3xl p-8 card-shadow">
-            <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-8 h-8 text-success" />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-strong rounded-3xl p-8 card-shadow"
+          >
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-8 h-8 text-emerald-400" />
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-4">Password Reset!</h2>
             <p className="text-muted-foreground mb-6">
               Your password has been successfully updated. Redirecting to dashboard...
             </p>
             <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-          </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -143,13 +147,30 @@ export default function ResetPassword() {
         </div>
 
         {/* Reset Card */}
-        <div className="glass-strong rounded-3xl p-8 card-shadow">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-strong rounded-3xl p-8 card-shadow"
+        >
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">Set New Password</h2>
             <p className="text-muted-foreground">
               Enter your new password below
             </p>
           </div>
+
+          {/* Inline Error */}
+          <AnimatePresence>
+            {error && (
+              <div className="mb-6">
+                <InlineAlert
+                  variant="error"
+                  message={error}
+                  onDismiss={() => setError(null)}
+                />
+              </div>
+            )}
+          </AnimatePresence>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
@@ -159,7 +180,11 @@ export default function ResetPassword() {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError(null);
+                  setFieldError(null);
+                }}
                 className="apple-input"
               />
             </div>
@@ -171,14 +196,15 @@ export default function ResetPassword() {
                 type="password"
                 placeholder="••••••••"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setError(null);
+                  setFieldError(null);
+                }}
                 className="apple-input"
               />
+              <FieldError message={fieldError || undefined} />
             </div>
-
-            {error && (
-              <p className="text-sm text-destructive text-center">{error}</p>
-            )}
 
             <Button
               type="submit"
@@ -203,7 +229,7 @@ export default function ResetPassword() {
               Back to Sign In
             </button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

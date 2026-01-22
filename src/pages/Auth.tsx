@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { InlineAlert, FieldError } from '@/components/ui/inline-alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { mapAuthError } from '@/hooks/useInlineError';
 import { z } from 'zod';
 import { ArrowRight, Sparkles, Target, Zap, Shield, Star } from 'lucide-react';
 
@@ -19,9 +20,9 @@ export default function Auth() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
   
   const { signIn, signUp, user } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,6 +30,12 @@ export default function Auth() {
       navigate('/dashboard');
     }
   }, [user, navigate]);
+
+  // Clear form error when switching modes
+  useEffect(() => {
+    setFormError(null);
+    setErrors({});
+  }, [isLogin]);
 
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -49,6 +56,7 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     
     if (!validate()) return;
     
@@ -58,48 +66,20 @@ export default function Auth() {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
-          toast({
-            title: 'Login failed',
-            description: error.message,
-            variant: 'destructive',
-          });
+          setFormError(mapAuthError(error));
         } else {
-          toast({
-            title: 'Welcome back!',
-            description: 'You have been signed in successfully.',
-          });
           navigate('/dashboard');
         }
       } else {
         const { error } = await signUp(email, password, fullName);
         if (error) {
-          if (error.message.includes('already registered')) {
-            toast({
-              title: 'Account exists',
-              description: 'This email is already registered. Please sign in instead.',
-              variant: 'destructive',
-            });
-          } else {
-            toast({
-              title: 'Sign up failed',
-              description: error.message,
-              variant: 'destructive',
-            });
-          }
+          setFormError(mapAuthError(error));
         } else {
-          toast({
-            title: 'Account created!',
-            description: 'Welcome to LeadPulse. You are now signed in.',
-          });
           navigate('/dashboard');
         }
       }
     } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
-      });
+      setFormError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -301,6 +281,18 @@ export default function Auth() {
                 </p>
               </div>
 
+              {/* Inline Error Alert */}
+              <AnimatePresence>
+                {formError && (
+                  <InlineAlert
+                    variant="error"
+                    title={isLogin ? "Sign in failed" : "Sign up failed"}
+                    message={formError}
+                    onDismiss={() => setFormError(null)}
+                  />
+                )}
+              </AnimatePresence>
+
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <AnimatePresence mode="wait">
@@ -335,18 +327,11 @@ export default function Auth() {
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setErrors({ ...errors, email: undefined });
+                      setFormError(null);
                     }}
                     className={`h-12 rounded-xl bg-white/[0.03] border-white/10 text-white placeholder:text-white/25 focus:border-primary/50 focus:bg-white/[0.05] transition-all ${errors.email ? 'border-destructive' : ''}`}
                   />
-                  {errors.email && (
-                    <motion.p 
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-xs text-destructive"
-                    >
-                      {errors.email}
-                    </motion.p>
-                  )}
+                  <FieldError message={errors.email} />
                 </div>
 
                 <div className="space-y-2">
@@ -370,18 +355,11 @@ export default function Auth() {
                     onChange={(e) => {
                       setPassword(e.target.value);
                       setErrors({ ...errors, password: undefined });
+                      setFormError(null);
                     }}
                     className={`h-12 rounded-xl bg-white/[0.03] border-white/10 text-white placeholder:text-white/25 focus:border-primary/50 focus:bg-white/[0.05] transition-all ${errors.password ? 'border-destructive' : ''}`}
                   />
-                  {errors.password && (
-                    <motion.p 
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-xs text-destructive"
-                    >
-                      {errors.password}
-                    </motion.p>
-                  )}
+                  <FieldError message={errors.password} />
                 </div>
 
                 <Button
@@ -412,23 +390,29 @@ export default function Auth() {
                 type="button"
                 onClick={() => {
                   setIsLogin(!isLogin);
-                  setErrors({});
+                  setEmail('');
+                  setPassword('');
+                  setFullName('');
                 }}
-                className="w-full h-12 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-white font-medium transition-all"
+                className="w-full py-3 text-center text-white/50 hover:text-white transition-colors"
               >
-                {isLogin ? "Create an account" : "Sign in instead"}
+                {isLogin ? (
+                  <>Don't have an account? <span className="text-primary font-medium">Sign up</span></>
+                ) : (
+                  <>Already have an account? <span className="text-primary font-medium">Sign in</span></>
+                )}
               </button>
 
-              {/* Footer */}
-              <p className="text-center text-xs text-white/30">
+              {/* Terms */}
+              <p className="text-xs text-center text-white/30 leading-relaxed">
                 By continuing, you agree to our{' '}
-                <a href="/terms" className="text-white/50 hover:text-primary transition-colors underline underline-offset-2">
-                  Terms
-                </a>
-                {' '}and{' '}
-                <a href="/privacy" className="text-white/50 hover:text-primary transition-colors underline underline-offset-2">
+                <button onClick={() => navigate('/terms')} className="text-white/50 hover:text-white underline underline-offset-2">
+                  Terms of Service
+                </button>{' '}
+                and{' '}
+                <button onClick={() => navigate('/privacy')} className="text-white/50 hover:text-white underline underline-offset-2">
                   Privacy Policy
-                </a>
+                </button>
               </p>
             </div>
           </motion.div>
