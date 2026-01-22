@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ContactDialog } from '@/components/ContactDialog';
-import { 
+import { FreeLeadSampleModal } from '@/components/lead-magnets/FreeLeadSampleModal';
+import { Users, Sparkles } from 'lucide-react';
+import {
   PulseOrb, 
   SparkBurst, 
   TargetRings, 
@@ -192,6 +194,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isFreeLeadSampleOpen, setIsFreeLeadSampleOpen] = useState(false);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -363,12 +366,14 @@ export default function Landing() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </Button>
-            <Button variant="ghost" size="lg" className="h-14 px-8 text-lg text-muted-foreground hover:text-foreground gap-2">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
-              </svg>
-              Watch Demo
+            <Button 
+              onClick={() => setIsFreeLeadSampleOpen(true)} 
+              variant="outline" 
+              size="lg" 
+              className="h-14 px-8 text-lg gap-2 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+            >
+              <Users className="w-5 h-5 text-primary" />
+              Get 5 Free Leads
             </Button>
           </motion.div>
           
@@ -555,6 +560,9 @@ export default function Landing() {
 
       {/* Contact Dialog */}
       <ContactDialog isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
+      
+      {/* Free Lead Sample Modal */}
+      <FreeLeadSampleModal open={isFreeLeadSampleOpen} onOpenChange={setIsFreeLeadSampleOpen} />
     </div>
   );
 }

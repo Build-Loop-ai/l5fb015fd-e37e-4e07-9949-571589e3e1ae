@@ -173,6 +173,45 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_magnet_submissions: {
+        Row: {
+          converted_to_user: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          input_data: Json | null
+          ip_address: string | null
+          magnet_type: string
+          output_data: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          converted_to_user?: boolean | null
+          created_at?: string | null
+          email: string
+          id?: string
+          input_data?: Json | null
+          ip_address?: string | null
+          magnet_type?: string
+          output_data?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          converted_to_user?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          input_data?: Json | null
+          ip_address?: string | null
+          magnet_type?: string
+          output_data?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           campaign_id: string | null
