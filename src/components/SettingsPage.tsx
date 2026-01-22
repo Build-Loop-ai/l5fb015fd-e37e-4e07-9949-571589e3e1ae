@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { GlowDot, AbstractBlob } from '@/components/ui/visual-elements';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscriptionRealtime } from '@/hooks/useSubscriptionRealtime';
 import { PricingPlans } from '@/components/PricingPlans';
 import { PLANS, PlanId } from '@/lib/plans';
 import { EmailConnectionCard } from '@/components/EmailConnectionCard';
@@ -68,6 +69,10 @@ function SettingRow({ label, description, children }: SettingRowProps) {
 export function SettingsPage() {
   const { toast } = useToast();
   const { user, subscription, subscriptionLoading, refreshSubscription, session } = useAuth();
+  
+  // Enable realtime subscription updates
+  useSubscriptionRealtime();
+  
   const [showPricing, setShowPricing] = useState(false);
   const [managingBilling, setManagingBilling] = useState(false);
   
