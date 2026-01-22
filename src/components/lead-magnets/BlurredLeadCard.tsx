@@ -38,7 +38,7 @@ export function BlurredLeadCard({ lead, index }: BlurredLeadCardProps) {
       {/* Top shine line */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-      <div className="relative flex items-start gap-4">
+      <div className="relative flex items-start gap-4 min-w-0">
         {/* Avatar with gradient ring */}
         <div className="relative shrink-0">
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -53,29 +53,29 @@ export function BlurredLeadCard({ lead, index }: BlurredLeadCardProps) {
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex-1 min-w-0 space-y-2 overflow-hidden">
           {/* Name */}
           <h4 className="font-semibold text-foreground truncate text-base">{lead.name}</h4>
 
           {/* Title */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
             <Briefcase className="w-3.5 h-3.5 text-primary/60 shrink-0" />
-            <span className="truncate">{lead.title}</span>
+            <span className="truncate min-w-0">{lead.title}</span>
           </div>
 
           {/* Company - blurred */}
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm min-w-0">
             <Building className="w-3.5 h-3.5 text-primary/60 shrink-0" />
-            <span className="text-muted-foreground blur-[5px] select-none">{lead.company}</span>
+            <span className="text-muted-foreground blur-[5px] select-none truncate min-w-0 flex-1">{lead.company}</span>
             <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
               <Lock className="w-2.5 h-2.5 text-primary" />
             </div>
           </div>
 
           {/* Location */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
             <MapPin className="w-3.5 h-3.5 text-primary/60 shrink-0" />
-            <span>{lead.location}</span>
+            <span className="truncate min-w-0">{lead.location}</span>
           </div>
         </div>
       </div>
