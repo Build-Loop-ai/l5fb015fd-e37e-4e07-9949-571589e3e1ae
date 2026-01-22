@@ -1,15 +1,52 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { GlowDot } from '@/components/ui/visual-elements';
 import { z } from 'zod';
+import { ArrowRight, Sparkles, Target, Zap, Shield } from 'lucide-react';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
+
+// Animated floating element
+function FloatingShape({ className, delay = 0 }: { className?: string; delay?: number }) {
+  return (
+    <motion.div
+      className={className}
+      animate={{
+        y: [0, -20, 0],
+        rotate: [0, 5, -5, 0],
+      }}
+      transition={{
+        duration: 6,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    />
+  );
+}
+
+// Feature item for signup side
+function FeatureItem({ icon: Icon, text, delay }: { icon: React.ElementType; text: string; delay: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.5, delay }}
+      className="flex items-center gap-4 group"
+    >
+      <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-colors">
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+      <span className="text-white/90 text-lg font-medium">{text}</span>
+    </motion.div>
+  );
+}
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,7 +60,6 @@ export default function Auth() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate('/dashboard');
@@ -106,52 +142,206 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-4 mb-12">
-          <div className="relative">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center border border-primary/25 animate-pulse-glow">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-primary/60 rotate-45" />
-            </div>
-            <GlowDot className="absolute -top-0.5 -right-0.5 w-3 h-3" color="success" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">LeadPulse</h1>
-            <p className="text-xs text-muted-foreground font-medium">AI-Powered Outreach</p>
-          </div>
-        </div>
+    <div className="min-h-screen flex">
+      {/* Left Side - Brand/Marketing Panel */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary">
+        {/* Gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/80" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(255,255,255,0.15)_0%,_transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,_rgba(0,0,0,0.2)_0%,_transparent_50%)]" />
+        
+        {/* Floating decorative shapes */}
+        <FloatingShape 
+          className="absolute top-20 right-20 w-32 h-32 rounded-full bg-white/10 blur-xl" 
+          delay={0} 
+        />
+        <FloatingShape 
+          className="absolute bottom-40 left-20 w-48 h-48 rounded-full bg-white/5 blur-2xl" 
+          delay={1} 
+        />
+        <FloatingShape 
+          className="absolute top-1/2 right-1/3 w-24 h-24 rounded-3xl bg-white/10 blur-lg rotate-45" 
+          delay={2} 
+        />
+        
+        {/* Grid pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                             linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px',
+          }}
+        />
 
-        {/* Auth Card */}
-        <div className="glass-strong rounded-3xl p-8 card-shadow">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              {isLogin ? 'Welcome back' : 'Create account'}
-            </h2>
-            <p className="text-muted-foreground">
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 w-full">
+          {/* Logo */}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex items-center gap-3"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+              <div className="w-5 h-5 rounded-lg bg-white rotate-45" />
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">LeadPulse</span>
+          </motion.div>
+
+          {/* Main content - changes based on login/signup */}
+          <div className="flex-1 flex flex-col justify-center py-12">
+            <AnimatePresence mode="wait">
+              {isLogin ? (
+                <motion.div
+                  key="login-content"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4 }}
+                  className="space-y-8"
+                >
+                  <div className="space-y-4">
+                    <h2 className="text-5xl xl:text-6xl font-bold text-white leading-tight">
+                      Welcome<br />back
+                    </h2>
+                    <p className="text-xl text-white/70 max-w-md leading-relaxed">
+                      Your leads are waiting. Sign in to continue building connections that matter.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex -space-x-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div 
+                          key={i}
+                          className="w-10 h-10 rounded-full bg-white/20 border-2 border-primary flex items-center justify-center text-xs font-bold text-white"
+                        >
+                          {String.fromCharCode(64 + i)}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-white/60 text-sm">
+                      Join 2,000+ sales teams
+                    </p>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="signup-content"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4 }}
+                  className="space-y-10"
+                >
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+                      <Sparkles className="w-4 h-4 text-white" />
+                      <span className="text-sm text-white font-medium">10 free leads included</span>
+                    </div>
+                    <h2 className="text-5xl xl:text-6xl font-bold text-white leading-tight">
+                      Find your<br />next customer
+                    </h2>
+                    <p className="text-xl text-white/70 max-w-md leading-relaxed">
+                      AI-powered lead generation that actually works. No credit card required.
+                    </p>
+                  </div>
+
+                  <div className="space-y-5">
+                    <FeatureItem icon={Target} text="AI-powered lead discovery" delay={0.1} />
+                    <FeatureItem icon={Zap} text="Instant email outreach generation" delay={0.2} />
+                    <FeatureItem icon={Shield} text="LinkedIn profile enrichment" delay={0.3} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Bottom quote/stats */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="border-t border-white/10 pt-8"
+          >
+            <div className="grid grid-cols-3 gap-8">
+              <div>
+                <p className="text-3xl font-bold text-white">50K+</p>
+                <p className="text-sm text-white/50">Leads generated</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-white">2.5x</p>
+                <p className="text-sm text-white/50">Reply rate increase</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-white">4.9★</p>
+                <p className="text-sm text-white/50">User rating</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Right Side - Auth Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-background p-6 lg:p-12">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
+          {/* Mobile logo */}
+          <div className="flex lg:hidden items-center justify-center gap-3 mb-12">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+              <div className="w-5 h-5 rounded-lg bg-primary rotate-45" />
+            </div>
+            <span className="text-2xl font-bold text-foreground tracking-tight">LeadPulse</span>
+          </div>
+
+          {/* Form header */}
+          <div className="mb-8">
+            <motion.h1 
+              key={isLogin ? 'login-title' : 'signup-title'}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl lg:text-4xl font-bold text-foreground mb-3"
+            >
+              {isLogin ? 'Sign in' : 'Create account'}
+            </motion.h1>
+            <p className="text-muted-foreground text-lg">
               {isLogin 
-                ? 'Sign in to continue to your dashboard' 
-                : 'Start your 10 free lead credits today'}
+                ? 'Enter your credentials to access your account' 
+                : 'Get started with 10 free lead credits'}
             </p>
           </div>
 
+          {/* Auth Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="apple-input"
-                />
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {!isLogin && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="h-12 rounded-xl bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20 transition-all"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -161,15 +351,32 @@ export default function Auth() {
                   setEmail(e.target.value);
                   setErrors({ ...errors, email: undefined });
                 }}
-                className={`apple-input ${errors.email ? 'border-destructive' : ''}`}
+                className={`h-12 rounded-xl bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20 transition-all ${errors.email ? 'border-destructive' : ''}`}
               />
               {errors.email && (
-                <p className="text-xs text-destructive">{errors.email}</p>
+                <motion.p 
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-destructive"
+                >
+                  {errors.email}
+                </motion.p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/forgot-password')}
+                    className="text-sm text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Forgot?
+                  </button>
+                )}
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -179,62 +386,66 @@ export default function Auth() {
                   setPassword(e.target.value);
                   setErrors({ ...errors, password: undefined });
                 }}
-                className={`apple-input ${errors.password ? 'border-destructive' : ''}`}
+                className={`h-12 rounded-xl bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20 transition-all ${errors.password ? 'border-destructive' : ''}`}
               />
               {errors.password && (
-                <p className="text-xs text-destructive">{errors.password}</p>
+                <motion.p 
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-destructive"
+                >
+                  {errors.password}
+                </motion.p>
               )}
             </div>
 
             <Button
               type="submit"
-              className="w-full apple-button h-12"
+              className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base group transition-all"
               disabled={loading}
             >
               {loading ? (
-                <div className="apple-spinner" />
-              ) : isLogin ? (
-                'Sign In'
+                <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
-                'Create Account'
+                <>
+                  {isLogin ? 'Sign in' : 'Create account'}
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
               )}
             </Button>
           </form>
 
-          <div className="mt-6 space-y-3 text-center">
-            {isLogin && (
-              <button
-                type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="text-sm text-primary hover:text-primary/80 transition-colors block w-full"
-              >
-                Forgot your password?
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setErrors({});
-              }}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isLogin ? (
-                <>Don't have an account? <span className="text-primary font-medium">Sign up</span></>
-              ) : (
-                <>Already have an account? <span className="text-primary font-medium">Sign in</span></>
-              )}
-            </button>
+          {/* Divider */}
+          <div className="my-8 flex items-center gap-4">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-sm text-muted-foreground">or</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
-        </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          By continuing, you agree to our{' '}
-          <a href="/terms" className="text-primary hover:underline">Terms of Service</a>
-          {' '}and{' '}
-          <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>.
-        </p>
+          {/* Toggle auth mode */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setErrors({});
+            }}
+            className="w-full h-12 rounded-xl border border-border bg-card hover:bg-muted/50 text-foreground font-medium transition-all"
+          >
+            {isLogin ? "Create an account" : "Sign in instead"}
+          </button>
+
+          {/* Footer */}
+          <p className="text-center text-sm text-muted-foreground mt-8">
+            By continuing, you agree to our{' '}
+            <a href="/terms" className="text-foreground hover:text-primary transition-colors underline underline-offset-2">
+              Terms
+            </a>
+            {' '}and{' '}
+            <a href="/privacy" className="text-foreground hover:text-primary transition-colors underline underline-offset-2">
+              Privacy Policy
+            </a>
+          </p>
+        </motion.div>
       </div>
     </div>
   );
