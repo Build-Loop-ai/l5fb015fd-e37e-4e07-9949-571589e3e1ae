@@ -89,7 +89,7 @@ export default function Auth() {
         } else {
           toast({
             title: 'Account created!',
-            description: 'Welcome to LeadFlow. You are now signed in.',
+            description: 'Welcome to LeadPulse. You are now signed in.',
           });
           navigate('/dashboard');
         }
@@ -201,7 +201,16 @@ export default function Auth() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 space-y-3 text-center">
+            {isLogin && (
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-primary hover:text-primary/80 transition-colors block w-full"
+              >
+                Forgot your password?
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -221,7 +230,10 @@ export default function Auth() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-8">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
+          By continuing, you agree to our{' '}
+          <a href="/terms" className="text-primary hover:underline">Terms of Service</a>
+          {' '}and{' '}
+          <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>.
         </p>
       </div>
     </div>
