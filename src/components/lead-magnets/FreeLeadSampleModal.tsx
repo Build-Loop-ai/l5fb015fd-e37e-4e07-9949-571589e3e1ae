@@ -110,7 +110,7 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-0 bg-background/80 backdrop-blur-2xl border-border/30 shadow-2xl shadow-primary/10">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 bg-background/80 backdrop-blur-2xl border-border/30 shadow-2xl shadow-primary/10">
         {/* Decorative header gradient */}
         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
@@ -369,7 +369,7 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
                 </div>
 
                 {/* Leads list */}
-                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1 -mr-1">
+                <div className="space-y-3 max-h-[320px] overflow-y-auto overflow-x-hidden pr-1">
                   {leads.map((lead, index) => (
                     <BlurredLeadCard key={index} lead={lead} index={index} />
                   ))}
