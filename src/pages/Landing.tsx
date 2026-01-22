@@ -116,46 +116,77 @@ function PricingCard({ name, price, leads, features, popular, index }: { name: s
       initial={{ opacity: 0, y: 50 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
       transition={{ duration: 0.6, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -8 }}
-      className={`relative p-8 rounded-3xl border ${popular ? 'border-primary bg-gradient-to-b from-primary/10 via-card/90 to-card/80 shadow-xl shadow-primary/10' : 'border-border/50 bg-card/60'} backdrop-blur-xl`}
+      whileHover={{ y: -8, scale: 1.02 }}
+      className={`relative flex flex-col p-8 rounded-3xl border backdrop-blur-xl transition-all duration-300 ${
+        popular 
+          ? 'border-primary/60 bg-gradient-to-b from-primary/15 via-card to-card shadow-2xl shadow-primary/20 ring-1 ring-primary/20' 
+          : 'border-border/60 bg-card hover:border-border hover:shadow-xl'
+      }`}
     >
+      {/* Glow effect for popular */}
       {popular && (
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+        <>
+          <div className="absolute -inset-px rounded-3xl bg-gradient-to-b from-primary/30 via-transparent to-transparent opacity-50 blur-sm pointer-events-none" />
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+        </>
       )}
+      
+      {/* Popular badge */}
       {popular && (
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
-          <span className="px-4 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground whitespace-nowrap shadow-lg shadow-primary/30">
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+          <span className="px-5 py-2 rounded-full text-xs font-bold bg-primary text-primary-foreground whitespace-nowrap shadow-lg shadow-primary/40 border border-primary-foreground/10">
             Most Popular
           </span>
         </div>
       )}
       
-      <div className={`${popular ? 'pt-2' : ''}`}>
+      {/* Content wrapper with flex-grow to push button down */}
+      <div className={`flex flex-col flex-1 ${popular ? 'pt-2' : ''}`}>
+        {/* Header */}
         <div className="mb-6">
-          <h3 className="text-xl font-semibold text-foreground mb-2">{name}</h3>
+          <h3 className="text-xl font-bold text-foreground mb-3">{name}</h3>
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold text-foreground">{price}</span>
-            <span className="text-muted-foreground text-sm">/month</span>
+            <span className="text-5xl font-bold text-foreground tracking-tight">{price}</span>
+            <span className="text-muted-foreground text-sm font-medium">/month</span>
           </div>
-          <p className="text-primary mt-2 text-sm font-medium">{leads} leads/month</p>
+          <div className={`inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full text-sm font-semibold ${
+            popular 
+              ? 'bg-primary/20 text-primary border border-primary/30' 
+              : 'bg-muted text-muted-foreground border border-border'
+          }`}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {leads} leads/month
+          </div>
         </div>
         
-        <ul className="space-y-3 mb-8">
+        {/* Features list - flex-1 to fill available space */}
+        <ul className="space-y-4 mb-8 flex-1">
           {features.map((feature, i) => (
-            <li key={i} className="flex items-start gap-3 text-muted-foreground text-sm">
-              <div className="w-5 h-5 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="w-3 h-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <li key={i} className="flex items-start gap-3 text-foreground/80 text-sm">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                popular 
+                  ? 'bg-primary/20 border border-primary/40' 
+                  : 'bg-muted border border-border'
+              }`}>
+                <svg className={`w-3 h-3 ${popular ? 'text-primary' : 'text-foreground/60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <span>{feature}</span>
+              <span className="leading-tight">{feature}</span>
             </li>
           ))}
         </ul>
         
+        {/* Button - always at bottom due to flex layout */}
         <button 
           onClick={() => navigate('/auth')}
-          className={`w-full h-12 rounded-xl font-semibold text-sm ${popular ? 'apple-button' : 'apple-button-secondary'}`}
+          className={`w-full h-14 rounded-2xl font-semibold text-base transition-all duration-300 ${
+            popular 
+              ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.02]' 
+              : 'bg-foreground text-background hover:opacity-90 hover:scale-[1.02]'
+          }`}
         >
           Get Started
         </button>
@@ -497,7 +528,7 @@ export default function Landing() {
             </p>
           </AnimatedSection>
           
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-8 items-stretch">
             {pricing.map((plan, i) => (
               <PricingCard key={plan.name} {...plan} index={i} />
             ))}
