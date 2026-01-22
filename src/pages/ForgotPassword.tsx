@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { InlineAlert, FieldError } from '@/components/ui/inline-alert';
 import { supabase } from '@/integrations/supabase/client';
 import { GlowDot } from '@/components/ui/visual-elements';
+import { mapAuthError } from '@/hooks/useInlineError';
 import { z } from 'zod';
-import { ArrowLeft, CheckCircle, Loader2, Mail } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail } from 'lucide-react';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 
@@ -16,18 +18,19 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldError(null);
 
     // Validate email
     const emailResult = emailSchema.safeParse(email);
     if (!emailResult.success) {
-      setError(emailResult.error.errors[0].message);
+      setFieldError(emailResult.error.errors[0].message);
       return;
     }
 
@@ -39,18 +42,9 @@ export default function ForgotPassword() {
       });
 
       if (resetError) {
-        setError(resetError.message);
-        toast({
-          title: 'Error',
-          description: resetError.message,
-          variant: 'destructive',
-        });
+        setError(mapAuthError(resetError));
       } else {
         setSent(true);
-        toast({
-          title: 'Check your email',
-          description: 'We sent you a password reset link.',
-        });
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -77,7 +71,11 @@ export default function ForgotPassword() {
             </div>
           </div>
 
-          <div className="glass-strong rounded-3xl p-8 card-shadow text-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-strong rounded-3xl p-8 card-shadow text-center"
+          >
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
               <Mail className="w-8 h-8 text-primary" />
             </div>
@@ -105,7 +103,7 @@ export default function ForgotPassword() {
                 Back to Sign In
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -129,13 +127,30 @@ export default function ForgotPassword() {
         </div>
 
         {/* Forgot Password Card */}
-        <div className="glass-strong rounded-3xl p-8 card-shadow">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-strong rounded-3xl p-8 card-shadow"
+        >
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">Forgot Password?</h2>
             <p className="text-muted-foreground">
               Enter your email and we'll send you a reset link
             </p>
           </div>
+
+          {/* Inline Error */}
+          <AnimatePresence>
+            {error && (
+              <div className="mb-6">
+                <InlineAlert
+                  variant="error"
+                  message={error}
+                  onDismiss={() => setError(null)}
+                />
+              </div>
+            )}
+          </AnimatePresence>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
@@ -148,12 +163,11 @@ export default function ForgotPassword() {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setError(null);
+                  setFieldError(null);
                 }}
-                className={`apple-input ${error ? 'border-destructive' : ''}`}
+                className={`apple-input ${fieldError ? 'border-destructive' : ''}`}
               />
-              {error && (
-                <p className="text-xs text-destructive">{error}</p>
-              )}
+              <FieldError message={fieldError || undefined} />
             </div>
 
             <Button
@@ -179,7 +193,7 @@ export default function ForgotPassword() {
               Back to Sign In
             </button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
