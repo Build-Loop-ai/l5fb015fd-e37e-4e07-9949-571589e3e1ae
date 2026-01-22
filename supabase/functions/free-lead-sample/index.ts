@@ -78,7 +78,7 @@ serve(async (req) => {
 
     console.log('Searching for leads with query:', query);
 
-    // Call Exa API directly for immediate results
+    // Call Exa API with LinkedIn-focused search for real leads
     const exaResponse = await fetch('https://api.exa.ai/search', {
       method: 'POST',
       headers: {
@@ -86,11 +86,11 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: `Find ${query} with contact information linkedin profile`,
-        type: 'auto',
+        query: `site:linkedin.com/in/ ${query}`,
+        type: 'neural',
         numResults: 5,
         contents: {
-          text: true,
+          text: { maxCharacters: 2000 },
           highlights: true,
         },
       }),
@@ -105,40 +105,74 @@ serve(async (req) => {
     const exaData = await exaResponse.json();
     console.log('Exa response:', JSON.stringify(exaData).substring(0, 500));
 
-    // Parse results into lead format
-    const fullLeads = (exaData.results || []).map((result: any, index: number) => {
-      // Extract name from title or URL
+    // Parse LinkedIn results into structured lead data
+    const parseLinkedInResult = (result: any) => {
       const titleParts = (result.title || '').split(' - ');
-      const name = titleParts[0] || `Lead ${index + 1}`;
       
-      // Try to extract company from title
-      const company = titleParts[1] || 'Company';
+      // Name is first part, company is usually second-to-last (before "LinkedIn")
+      const name = titleParts[0]?.trim() || 'Professional';
+      const company = titleParts.length > 2 
+        ? titleParts[titleParts.length - 2]?.trim() 
+        : titleParts[1]?.trim() || null;
       
-      // Extract title/role if present
       const text = result.text || '';
-      const titleMatch = text.match(/(?:is a|works as|role:?|title:?)\s*([^.|\n]+)/i);
-      const title = titleMatch ? titleMatch[1].trim() : 'Professional';
-
-      // Check if it's a LinkedIn URL
-      const isLinkedIn = result.url?.includes('linkedin.com');
+      const lines = text.split('\n').filter((l: string) => l.trim());
+      
+      // First meaningful line after name header is usually the headline/title
+      let headline = null;
+      for (const line of lines.slice(0, 5)) {
+        const trimmed = line.trim();
+        // Skip if it's just the name or very short
+        if (trimmed.length > 15 && !trimmed.toLowerCase().includes(name.toLowerCase().split(' ')[0])) {
+          headline = trimmed.substring(0, 120);
+          break;
+        }
+      }
+      
+      // Extract location from common LinkedIn patterns
+      const locationPatterns = [
+        /(?:based in|located in|from|📍)\s*([^|\n,]+(?:,\s*[^|\n]+)?)/i,
+        /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?,\s*(?:[A-Z]{2}|[A-Z][a-z]+))\s*(?:\||·|$)/,
+        /(Netherlands|Germany|France|United Kingdom|UK|USA|United States|Canada|Australia|India)/i,
+      ];
+      
+      let location = null;
+      for (const pattern of locationPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          location = match[1]?.trim().substring(0, 50);
+          break;
+        }
+      }
+      
+      // Check for real contact info indicators in the text
+      const hasEmailIndicator = /@[a-z0-9.-]+\.[a-z]{2,}/i.test(text) || 
+        /\bemail\b.*available/i.test(text) ||
+        /contact.*email/i.test(text);
+      
+      const hasPhoneIndicator = /\+?[\d\s\-\(\)]{10,}/.test(text) ||
+        /\bphone\b.*available/i.test(text) ||
+        /\bcall\b/i.test(text);
 
       return {
-        name: name.substring(0, 50),
-        title: title.substring(0, 100),
-        company: company.substring(0, 50),
-        location: 'United States',
+        name: name.substring(0, 60),
+        title: headline || 'Professional',
+        company: company?.substring(0, 60) || 'Company',
+        location: location || null,
         url: result.url,
-        isLinkedIn,
-        hasEmail: Math.random() > 0.3, // Simulate email availability
-        hasPhone: Math.random() > 0.6, // Simulate phone availability
+        isLinkedIn: result.url?.includes('linkedin.com'),
+        hasEmail: hasEmailIndicator,
+        hasPhone: hasPhoneIndicator,
       };
-    });
+    };
+
+    const fullLeads = (exaData.results || []).map(parseLinkedInResult);
 
     // Create blurred version for response (hide sensitive data)
     const blurredLeads = fullLeads.map((lead: any) => ({
       name: lead.name,
       title: lead.title,
-      company: lead.company.substring(0, 3) + '***',
+      company: lead.company ? lead.company.substring(0, 3) + '***' : '***',
       location: lead.location,
       email_available: lead.hasEmail,
       linkedin_available: lead.isLinkedIn,
@@ -158,7 +192,6 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Failed to store submission:', insertError);
-      // Don't fail the request, just log
     }
 
     return new Response(JSON.stringify({
