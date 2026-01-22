@@ -12,6 +12,7 @@ import { SettingsPage } from '@/components/SettingsPage';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { Button } from '@/components/ui/button';
 import { RingLoader, AbstractBlob, TargetRings, SparkBurst, DataFlow } from '@/components/ui/visual-elements';
+import { SEO } from '@/components/SEO';
 import { 
   getLeads, 
   getCampaigns, 
@@ -26,8 +27,10 @@ import { Lead as LegacyLead } from '@/types/lead';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionRealtime } from '@/hooks/useSubscriptionRealtime';
+import { useBrandConfig } from '@/hooks/useBrandConfig';
 
 export default function Index() {
+  const { appName } = useBrandConfig();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedLead, setSelectedLead] = useState<LegacyLead | null>(null);
   const [dbLeads, setDbLeads] = useState<ApiLead[]>([]);
@@ -424,7 +427,7 @@ export default function Index() {
                       <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
                     </div>
                   </div>
-                  <h3 className="text-3xl font-bold text-foreground mb-4">Welcome to LeadPulse</h3>
+                  <h3 className="text-3xl font-bold text-foreground mb-4">Welcome to {appName}</h3>
                   <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
                     Start by creating a campaign to find and organize your leads using AI-powered search.
                   </p>

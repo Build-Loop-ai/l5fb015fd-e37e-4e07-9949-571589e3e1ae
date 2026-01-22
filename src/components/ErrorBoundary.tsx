@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { SupportLink } from '@/components/SupportLink';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -113,9 +114,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {/* Support message */}
             <p className="text-sm text-muted-foreground mt-6">
               If this problem persists, please{' '}
-              <a href="mailto:support@leadpulse.com" className="text-primary hover:underline">
-                contact support
-              </a>
+              <SupportLink />
             </p>
           </div>
         </div>
