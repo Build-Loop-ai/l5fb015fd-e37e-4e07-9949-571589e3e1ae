@@ -25,7 +25,7 @@ interface FreeLeadSampleModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Step = 'query' | 'email' | 'loading' | 'results';
+type Step = 'query' | 'email' | 'loading' | 'results' | 'limit-reached';
 
 const suggestions = [
   { label: 'SaaS founders', icon: Target },
@@ -62,13 +62,33 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
     setStep('loading');
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('free-lead-sample', {
+      const response = await supabase.functions.invoke('free-lead-sample', {
         body: { email, query },
       });
 
-      if (fnError) throw fnError;
+      // Handle rate limit (429)
+      if (response.error) {
+        const errorMessage = response.error.message || 'Something went wrong';
+        
+        // Check if it's a rate limit error
+        if (errorMessage.includes('already used') || errorMessage.includes('limit')) {
+          setError(errorMessage);
+          setStep('limit-reached');
+          return;
+        }
+        
+        throw response.error;
+      }
 
+      const data = response.data;
+
+      // Handle error in response body (for non-HTTP errors)
       if (data?.error) {
+        if (data.limit_reached) {
+          setError(data.error);
+          setStep('limit-reached');
+          return;
+        }
         setError(data.error);
         setStep('email');
         return;
@@ -76,13 +96,30 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
 
       setLeads(data?.leads || []);
       setStep('results');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Free lead sample error:', err);
-      setError('Something went wrong. Please try again.');
+      
+      // Parse error message from edge function response
+      let errorMessage = 'Something went wrong. Please try again.';
+      try {
+        if (err.context?.body) {
+          const body = JSON.parse(err.context.body);
+          if (body.error) {
+            errorMessage = body.error;
+            if (body.limit_reached) {
+              setError(errorMessage);
+              setStep('limit-reached');
+              return;
+            }
+          }
+        }
+      } catch {}
+      
+      setError(errorMessage);
       setStep('email');
       toast({
         title: "Error",
-        description: "Failed to fetch leads. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -143,6 +180,7 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
               {step === 'email' && 'Enter your email to receive your personalized leads.'}
               {step === 'loading' && 'Our AI is searching millions of profiles...'}
               {step === 'results' && 'Sign up to unlock full contact details.'}
+              {step === 'limit-reached' && 'Ready to unlock unlimited leads?'}
             </DialogDescription>
           </DialogHeader>
 
@@ -409,6 +447,60 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </motion.div>
+              </motion.div>
+            )}
+
+            {step === 'limit-reached' && (
+              <motion.div
+                key="limit-reached"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="space-y-6 mt-6"
+              >
+                <div className="text-center py-8">
+                  <div className="relative mx-auto mb-6">
+                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
+                    <div className="relative w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30">
+                      <Lock className="w-10 h-10 text-primary-foreground" />
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-xl font-bold text-foreground mb-2">
+                    You've used your free samples
+                  </h3>
+                  <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                    {error || "Sign up now to unlock unlimited leads with full contact details."}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-foreground text-sm">Go Pro</h4>
+                      <p className="text-xs text-muted-foreground">250 leads/mo + emails, phones, LinkedIn</p>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleSignUp} 
+                    className="w-full h-12 rounded-lg apple-button"
+                  >
+                    Start Free Trial
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+
+                <button
+                  onClick={() => handleOpenChange(false)}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Maybe later
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
