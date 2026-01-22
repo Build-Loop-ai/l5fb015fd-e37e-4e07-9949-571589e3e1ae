@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Download } from 'lucide-react';
+import { CheckCircle2, Download, Users, Search, Sparkles } from 'lucide-react';
 import { exportLeadsToCSV } from '@/lib/csv-export';
 import { useToast } from '@/hooks/use-toast';
+import { EmptyState } from '@/components/EmptyState';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,8 @@ interface LeadTableProps {
   onLeadClick: (lead: Lead) => void;
   onStatusChange?: (leadId: string, status: string) => void;
   onDelete?: (leadId: string) => void;
+  onCreateCampaign?: () => void;
+  onFindLeads?: () => void;
 }
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -51,7 +54,9 @@ export function LeadTable({
   onCampaignFilterChange,
   onLeadClick, 
   onStatusChange, 
-  onDelete 
+  onDelete,
+  onCreateCampaign,
+  onFindLeads,
 }: LeadTableProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -238,13 +243,51 @@ export function LeadTable({
           <tbody>
             {filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-16 text-center text-muted-foreground">
-                  <div className="w-12 h-12 mx-auto mb-4 opacity-30">
-                    <div className="w-8 h-8 rounded-full border-2 border-muted-foreground mx-auto" />
-                    <div className="w-2.5 h-4 bg-muted-foreground rounded-full mx-auto -mt-1 rotate-45 origin-top" />
-                  </div>
-                  <p className="font-medium">No leads found</p>
-                  <p className="text-sm mt-1">Try adjusting your search</p>
+                <td colSpan={6} className="p-0">
+                  {leads.length === 0 ? (
+                    // No leads at all - encourage creating a campaign
+                    <EmptyState
+                      icon={<Users className="w-8 h-8" />}
+                      title="No leads yet"
+                      description="Create a campaign to start discovering potential customers using AI-powered search."
+                      actionLabel={onCreateCampaign ? "Create Campaign" : undefined}
+                      onAction={onCreateCampaign}
+                      secondaryActionLabel={onFindLeads ? "Find Leads" : undefined}
+                      onSecondaryAction={onFindLeads}
+                    />
+                  ) : searchQuery || statusFilter !== 'all' ? (
+                    // Has leads but filters returned no results
+                    <EmptyState
+                      icon={<Search className="w-8 h-8" />}
+                      title="No matching leads"
+                      description="Try adjusting your search query or filters to find what you're looking for."
+                      actionLabel="Clear Filters"
+                      onAction={() => {
+                        setSearchQuery('');
+                        setStatusFilter('all');
+                      }}
+                    />
+                  ) : selectedCampaignId ? (
+                    // Viewing a campaign with no leads
+                    <EmptyState
+                      icon={<Sparkles className="w-8 h-8" />}
+                      title="No leads in this campaign"
+                      description="This campaign doesn't have any leads yet. Find more leads to add to it."
+                      actionLabel={onFindLeads ? "Find Leads" : undefined}
+                      onAction={onFindLeads}
+                      secondaryActionLabel="View All Leads"
+                      onSecondaryAction={() => onCampaignFilterChange?.(null)}
+                    />
+                  ) : (
+                    // Fallback empty state
+                    <EmptyState
+                      icon={<Users className="w-8 h-8" />}
+                      title="No leads found"
+                      description="Start by creating a campaign to find leads."
+                      actionLabel={onCreateCampaign ? "Create Campaign" : undefined}
+                      onAction={onCreateCampaign}
+                    />
+                  )}
                 </td>
               </tr>
             ) : (

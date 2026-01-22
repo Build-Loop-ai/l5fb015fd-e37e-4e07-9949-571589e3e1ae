@@ -9,6 +9,7 @@ import { LeadFinder } from '@/components/LeadFinder';
 import { LeadDetailSheet } from '@/components/LeadDetailSheet';
 import { CreateCampaignDialog } from '@/components/CreateCampaignDialog';
 import { SettingsPage } from '@/components/SettingsPage';
+import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { Button } from '@/components/ui/button';
 import { RingLoader, AbstractBlob, TargetRings, SparkBurst, DataFlow } from '@/components/ui/visual-elements';
 import { 
@@ -81,17 +82,17 @@ export default function Index() {
     }
   }, [searchParams, toast, refreshSubscription, navigate, isOAuthPopup]);
 
-  // If this is the OAuth popup, render the callback handler
-  if (isOAuthPopup) {
-    return <OAuthCallback />;
-  }
-
   // Redirect to auth if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
+  // If this is the OAuth popup, render the callback handler
+  if (isOAuthPopup) {
+    return <OAuthCallback />;
+  }
 
   const loadData = async () => {
     setIsLoading(true);
@@ -291,6 +292,14 @@ export default function Index() {
               <p className="page-subtitle">Track your outreach performance and lead pipeline</p>
             </div>
 
+            {/* Onboarding Checklist */}
+            <OnboardingChecklist
+              onCreateCampaign={() => setShowCreateCampaign(true)}
+              onNavigateToFinder={() => setActiveTab('finder')}
+              onNavigateToSettings={() => setActiveTab('settings')}
+              onNavigateToLeads={() => setActiveTab('leads')}
+            />
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
               <StatCard
@@ -451,30 +460,17 @@ export default function Index() {
                 </Button>
               </div>
             </div>
-            {convertedLeads.length > 0 || selectedCampaignId ? (
-              <LeadTable 
-                leads={convertedLeads}
-                campaigns={campaigns}
-                selectedCampaignId={selectedCampaignId}
-                onCampaignFilterChange={setSelectedCampaignId}
-                onLeadClick={(lead) => setSelectedLead(lead)}
-                onStatusChange={handleStatusChange}
-                onDelete={handleDeleteLead}
-              />
-            ) : (
-              <div className="empty-state">
-                <div className="relative z-10">
-                  <div className="visual-badge visual-badge-lg mx-auto mb-8">
-                    <TargetRings className="w-12 h-12" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-3">No leads yet</h3>
-                  <p className="text-muted-foreground mb-6">Create a campaign to start finding leads</p>
-                  <Button onClick={() => setShowCreateCampaign(true)} size="lg" className="rounded-xl">
-                    Create Campaign →
-                  </Button>
-                </div>
-              </div>
-            )}
+            <LeadTable 
+              leads={convertedLeads}
+              campaigns={campaigns}
+              selectedCampaignId={selectedCampaignId}
+              onCampaignFilterChange={setSelectedCampaignId}
+              onLeadClick={(lead) => setSelectedLead(lead)}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDeleteLead}
+              onCreateCampaign={() => setShowCreateCampaign(true)}
+              onFindLeads={() => setActiveTab('finder')}
+            />
           </div>
         )}
 
