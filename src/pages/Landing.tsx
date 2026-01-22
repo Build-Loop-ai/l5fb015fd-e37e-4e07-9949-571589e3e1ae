@@ -120,7 +120,7 @@ function PricingCard({ name, price, leads, features, popular, index }: { name: s
       className={`relative flex flex-col p-8 rounded-3xl border backdrop-blur-xl transition-all duration-300 ${
         popular 
           ? 'border-primary/60 bg-gradient-to-b from-primary/15 via-card to-card shadow-2xl shadow-primary/20 ring-1 ring-primary/20' 
-          : 'border-border/60 bg-card hover:border-border hover:shadow-xl'
+          : 'border-white/10 bg-card/80 hover:border-white/20 hover:shadow-xl ring-1 ring-white/5'
       }`}
     >
       {/* Glow effect for popular */}
