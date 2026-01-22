@@ -52,6 +52,15 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${queuedEmails.length} queued emails`);
 
+    // Fetch email settings once
+    const { data: emailSettings } = await supabase
+      .from('platform_settings')
+      .select('key, value')
+      .in('key', ['email_from_name', 'email_from_address']);
+
+    const fromName = emailSettings?.find(s => s.key === 'email_from_name')?.value || 'LeadPulse';
+    const fromAddress = emailSettings?.find(s => s.key === 'email_from_address')?.value || 'onboarding@resend.dev';
+
     let processed = 0;
     let skipped = 0;
     const errors: string[] = [];
@@ -82,7 +91,7 @@ Deno.serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'LeadPulse <onboarding@resend.dev>',
+            from: `${fromName} <${fromAddress}>`,
             to: [email.recipient_email],
             subject: email.subject,
             html: bodyWithTracking,

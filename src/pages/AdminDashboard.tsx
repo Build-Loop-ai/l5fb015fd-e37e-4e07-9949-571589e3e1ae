@@ -40,6 +40,7 @@ import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
 import { EmailSequenceManager } from '@/components/admin/EmailSequenceManager';
 import { EmailHistoryTable } from '@/components/admin/EmailHistoryTable';
+import { PlatformSettings } from '@/components/admin/PlatformSettings';
 import {
   PulseOrb,
   SparkBurst,
@@ -660,6 +661,18 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+          </motion.div>
+        );
+
+      case 'settings':
+        return (
+          <motion.div
+            key="settings"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <PlatformSettings />
           </motion.div>
         );
 
