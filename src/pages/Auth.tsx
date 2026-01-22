@@ -310,167 +310,184 @@ export default function Auth() {
       </div>
 
       {/* Right Side - Auth Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-background p-6 lg:p-12">
+      <div className="w-full lg:w-1/2 relative flex items-center justify-center p-6 lg:p-12 bg-[#0a0a0a]">
+        {/* Subtle glow that bleeds from left side */}
+        <div className="absolute left-0 top-1/3 w-[300px] h-[400px] rounded-full bg-primary/10 blur-[120px] -translate-x-1/2" />
+        
+        {/* Grain texture overlay for consistency */}
+        <div 
+          className="absolute inset-0 opacity-[0.3] mix-blend-overlay pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        
         <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="relative z-10 w-full max-w-md"
         >
-          {/* Mobile logo */}
-          <div className="flex lg:hidden items-center justify-center gap-3 mb-12">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
-              <div className="w-5 h-5 rounded-lg bg-primary rotate-45" />
-            </div>
-            <span className="text-2xl font-bold text-foreground tracking-tight">LeadPulse</span>
-          </div>
-
-          {/* Form header */}
-          <div className="mb-8">
-            <motion.h1 
-              key={isLogin ? 'login-title' : 'signup-title'}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-3xl lg:text-4xl font-bold text-foreground mb-3"
-            >
-              {isLogin ? 'Sign in' : 'Create account'}
-            </motion.h1>
-            <p className="text-muted-foreground text-lg">
-              {isLogin 
-                ? 'Enter your credentials to access your account' 
-                : 'Get started with 10 free lead credits'}
-            </p>
-          </div>
-
-          {/* Auth Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <AnimatePresence mode="wait">
-              {!isLogin && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-2"
-                >
-                  <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="h-12 rounded-xl bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20 transition-all"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setErrors({ ...errors, email: undefined });
-                }}
-                className={`h-12 rounded-xl bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20 transition-all ${errors.email ? 'border-destructive' : ''}`}
-              />
-              {errors.email && (
-                <motion.p 
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-xs text-destructive"
-                >
-                  {errors.email}
-                </motion.p>
-              )}
+          {/* Floating glassmorphic card */}
+          <div className="relative p-8 lg:p-10 rounded-3xl bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-[0_0_60px_rgba(255,45,146,0.1)]">
+            {/* Card inner glow */}
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+            
+            {/* Mobile logo */}
+            <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/40 shadow-[0_0_20px_rgba(255,45,146,0.4)]">
+                <div className="w-4 h-4 rounded-md bg-primary rotate-45" />
+              </div>
+              <span className="text-xl font-bold text-white tracking-tight">LeadPulse</span>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                {isLogin && (
-                  <button
-                    type="button"
-                    onClick={() => navigate('/forgot-password')}
-                    className="text-sm text-primary hover:text-primary/80 transition-colors"
+            {/* Form header */}
+            <div className="mb-8 relative">
+              <motion.h1 
+                key={isLogin ? 'login-title' : 'signup-title'}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-2xl lg:text-3xl font-bold text-white mb-2"
+              >
+                {isLogin ? 'Sign in' : 'Create account'}
+              </motion.h1>
+              <p className="text-white/50 text-sm lg:text-base">
+                {isLogin 
+                  ? 'Enter your credentials to access your account' 
+                  : 'Get started with 10 free lead credits'}
+              </p>
+            </div>
+
+            {/* Auth Form */}
+            <form onSubmit={handleSubmit} className="space-y-5 relative">
+              <AnimatePresence mode="wait">
+                {!isLogin && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-2"
                   >
-                    Forgot?
-                  </button>
+                    <Label htmlFor="fullName" className="text-sm font-medium text-white/70">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      type="text"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="h-12 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary focus:ring-primary/20 transition-all"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-white/70">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErrors({ ...errors, email: undefined });
+                  }}
+                  className={`h-12 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary focus:ring-primary/20 transition-all ${errors.email ? 'border-destructive' : ''}`}
+                />
+                {errors.email && (
+                  <motion.p 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-xs text-destructive"
+                  >
+                    {errors.email}
+                  </motion.p>
                 )}
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setErrors({ ...errors, password: undefined });
-                }}
-                className={`h-12 rounded-xl bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20 transition-all ${errors.password ? 'border-destructive' : ''}`}
-              />
-              {errors.password && (
-                <motion.p 
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-xs text-destructive"
-                >
-                  {errors.password}
-                </motion.p>
-              )}
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium text-white/70">Password</Label>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/forgot-password')}
+                      className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Forgot?
+                    </button>
+                  )}
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setErrors({ ...errors, password: undefined });
+                  }}
+                  className={`h-12 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary focus:ring-primary/20 transition-all ${errors.password ? 'border-destructive' : ''}`}
+                />
+                {errors.password && (
+                  <motion.p 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-xs text-destructive"
+                  >
+                    {errors.password}
+                  </motion.p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base group transition-all shadow-[0_0_30px_rgba(255,45,146,0.4)] hover:shadow-[0_0_40px_rgba(255,45,146,0.6)]"
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                ) : (
+                  <>
+                    {isLogin ? 'Sign in' : 'Create account'}
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            {/* Divider */}
+            <div className="my-6 flex items-center gap-4">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-sm text-white/30">or</span>
+              <div className="flex-1 h-px bg-white/10" />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base group transition-all"
-              disabled={loading}
+            {/* Toggle auth mode */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setErrors({});
+              }}
+              className="w-full h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium transition-all"
             >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              ) : (
-                <>
-                  {isLogin ? 'Sign in' : 'Create account'}
-                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </Button>
-          </form>
+              {isLogin ? "Create an account" : "Sign in instead"}
+            </button>
 
-          {/* Divider */}
-          <div className="my-8 flex items-center gap-4">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-sm text-muted-foreground">or</span>
-            <div className="flex-1 h-px bg-border" />
+            {/* Footer */}
+            <p className="text-center text-xs text-white/40 mt-6">
+              By continuing, you agree to our{' '}
+              <a href="/terms" className="text-white/60 hover:text-primary transition-colors underline underline-offset-2">
+                Terms
+              </a>
+              {' '}and{' '}
+              <a href="/privacy" className="text-white/60 hover:text-primary transition-colors underline underline-offset-2">
+                Privacy Policy
+              </a>
+            </p>
           </div>
-
-          {/* Toggle auth mode */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setErrors({});
-            }}
-            className="w-full h-12 rounded-xl border border-border bg-card hover:bg-muted/50 text-foreground font-medium transition-all"
-          >
-            {isLogin ? "Create an account" : "Sign in instead"}
-          </button>
-
-          {/* Footer */}
-          <p className="text-center text-sm text-muted-foreground mt-8">
-            By continuing, you agree to our{' '}
-            <a href="/terms" className="text-foreground hover:text-primary transition-colors underline underline-offset-2">
-              Terms
-            </a>
-            {' '}and{' '}
-            <a href="/privacy" className="text-foreground hover:text-primary transition-colors underline underline-offset-2">
-              Privacy Policy
-            </a>
-          </p>
         </motion.div>
       </div>
     </div>
