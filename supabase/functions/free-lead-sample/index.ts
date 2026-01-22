@@ -6,55 +6,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Filter to only keep actual LinkedIn profile URLs
-function isValidProfileUrl(url: string): boolean {
-  if (!url) return false;
-  const lowerUrl = url.toLowerCase();
-  // Must be a profile URL
-  if (!lowerUrl.includes('linkedin.com/in/')) return false;
-  // Exclude job pages, company pages, etc.
-  if (lowerUrl.includes('/jobs/') || lowerUrl.includes('/job/')) return false;
-  if (lowerUrl.includes('/company/')) return false;
-  if (lowerUrl.includes('/pulse/')) return false;
-  if (lowerUrl.includes('/posts/')) return false;
-  return true;
-}
-
-// Check if the result looks like a real person profile (not a search/error page)
-function isValidProfileContent(result: any): boolean {
-  const title = (result.title || '').toLowerCase();
-  const text = (result.text || '').toLowerCase();
-  
-  // Skip error/search pages
-  const invalidPatterns = [
-    "we couldn't find a match",
-    "couldn't find a match",
-    "jobs in",
-    "job opportunities",
-    "linkedin respects your privacy",
-    "sign in to view",
-    "this page doesn't exist",
-    "page not found",
-    "0 results",
-    "no results found",
-    "search results",
-    "job search"
-  ];
-  
-  for (const pattern of invalidPatterns) {
-    if (title.includes(pattern) || text.slice(0, 500).includes(pattern)) {
-      return false;
-    }
+// Extract name from LinkedIn URL slug as fallback
+function extractNameFromLinkedInUrl(url: string): string {
+  const urlMatch = url.match(/linkedin\.com\/in\/([^\/\?]+)/);
+  if (urlMatch) {
+    let slug = urlMatch[1];
+    // Remove trailing hash (e.g., "john-doe-a1b2c3")
+    slug = slug.replace(/-[a-f0-9]{6,}$/i, '');
+    // Convert dashes to spaces and capitalize
+    const name = slug
+      .replace(/-/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+    return name;
   }
-  
-  // Must have some meaningful content
-  if (text.length < 50) return false;
-  
-  return true;
+  return '';
 }
 
-// Parse LinkedIn profile from Exa result
-function parseLinkedInResult(result: any): {
+// Parse lead data from Exa result - matching the main app approach
+function parseLeadFromResult(result: any): {
   name: string;
   title: string;
   company: string;
@@ -65,65 +36,106 @@ function parseLinkedInResult(result: any): {
   phone_available: boolean;
 } | null {
   const url = result.url || '';
-  const titleStr = result.title || '';
   const text = result.text || '';
+  const properties = result.properties || {};
   
-  // Parse name from title (format: "Name - Title - Company | LinkedIn" or "Name | LinkedIn")
-  let name = 'Unknown';
-  let jobTitle = '';
-  let company = '';
-  
-  // Remove " | LinkedIn" suffix first
-  const cleanTitle = titleStr.replace(/\s*[|]\s*LinkedIn.*$/i, '').trim();
-  
-  // Split by " - " to get parts
-  const parts = cleanTitle.split(/\s*[-–]\s*/);
-  
-  if (parts.length >= 1) {
-    name = parts[0]?.trim() || 'Unknown';
+  // Skip non-LinkedIn profile URLs
+  if (!url.toLowerCase().includes('linkedin.com/in/')) {
+    return null;
   }
   
-  if (parts.length >= 2) {
-    // Second part could be "Title at Company" or just "Title" or "Company"
-    const secondPart = parts[1]?.trim() || '';
-    const atMatch = secondPart.match(/^(.+?)\s+(?:at|@)\s+(.+)$/i);
-    
-    if (atMatch) {
-      jobTitle = atMatch[1]?.trim() || '';
-      company = atMatch[2]?.trim() || '';
-    } else {
-      jobTitle = secondPart;
+  let name = '';
+  let title = '';
+  let company = '';
+  let location: string | null = null;
+  
+  // Try structured summary first (if we requested JSON schema)
+  if (result.summary) {
+    try {
+      const summaryData = typeof result.summary === 'string' 
+        ? JSON.parse(result.summary) 
+        : result.summary;
+      
+      name = summaryData.name || summaryData.fullName || '';
+      title = summaryData.jobTitle || summaryData.title || summaryData.position || '';
+      company = summaryData.company || summaryData.companyName || '';
+      location = summaryData.location || null;
+    } catch (e) {
+      // Summary parsing failed, continue with other methods
     }
   }
   
-  if (parts.length >= 3 && !company) {
-    company = parts[2]?.trim() || '';
+  // Try properties.person (structured data from Exa)
+  if (!name && properties.type === 'person' && properties.person) {
+    name = properties.person.name || '';
+    location = properties.person.location || location;
+    title = properties.person.position || title;
+    if (properties.person.company) {
+      company = properties.person.company.name || company;
+    }
   }
   
-  // Skip if name looks like a search query, job listing, or error
+  // Parse from title string: "Name - Title at Company | LinkedIn"
+  if (!name) {
+    const titleStr = result.title || '';
+    const cleanTitle = titleStr.replace(/\s*[|]\s*LinkedIn.*$/i, '').trim();
+    const parts = cleanTitle.split(/\s*[-–]\s*/);
+    
+    if (parts.length >= 1) {
+      name = parts[0]?.trim() || '';
+    }
+    
+    if (parts.length >= 2 && !title) {
+      const secondPart = parts[1]?.trim() || '';
+      const atMatch = secondPart.match(/^(.+?)\s+(?:at|@)\s+(.+)$/i);
+      
+      if (atMatch) {
+        title = atMatch[1]?.trim() || '';
+        company = atMatch[2]?.trim() || company;
+      } else {
+        title = secondPart;
+      }
+    }
+    
+    if (parts.length >= 3 && !company) {
+      company = parts[2]?.trim() || '';
+    }
+  }
+  
+  // Fallback: extract name from LinkedIn URL slug
+  if (!name) {
+    name = extractNameFromLinkedInUrl(url);
+  }
+  
+  // Skip invalid results
+  if (!name || name.length < 2) {
+    return null;
+  }
+  
+  // Skip if name looks like a search query or error page
   const nameLower = name.toLowerCase();
   if (nameLower.includes('job') || 
       nameLower.includes('search') || 
       nameLower.includes('result') ||
       nameLower.includes("couldn't find") ||
-      name.length < 2 ||
-      name.length > 60) {
+      nameLower.includes('linkedin')) {
     return null;
   }
   
-  // Try to extract location from text
-  let location: string | null = null;
-  const locationPatterns = [
-    /(?:based in|located in|from|📍)\s*([^|\n,]+(?:,\s*[^|\n]+)?)/i,
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?,\s*(?:[A-Z]{2}|[A-Z][a-z]+))\s*(?:\||·|area|$)/,
-    /(Netherlands|Amsterdam|Rotterdam|Germany|Berlin|Munich|France|Paris|United Kingdom|UK|London|USA|United States|New York|San Francisco|Canada|Toronto|Australia|Sydney|India|Bangalore)/i,
-  ];
-  
-  for (const pattern of locationPatterns) {
-    const match = text.match(pattern);
-    if (match && match[1] && match[1].length < 50) {
-      location = match[1].trim();
-      break;
+  // Extract location from text if not found
+  if (!location) {
+    const locationPatterns = [
+      /(?:based in|located in|from|📍)\s*([^|\n,]+(?:,\s*[^|\n]+)?)/i,
+      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?,\s*(?:[A-Z]{2}|[A-Z][a-z]+))\s*(?:\||·|area|$)/,
+      /(Netherlands|Amsterdam|Rotterdam|The Hague|Utrecht|Germany|Berlin|Munich|France|Paris|United Kingdom|UK|London|USA|United States|New York|San Francisco|Los Angeles|Canada|Toronto|Vancouver|Australia|Sydney|Melbourne|India|Bangalore|Mumbai)/i,
+    ];
+    
+    for (const pattern of locationPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1] && match[1].length < 50) {
+        location = match[1].trim();
+        break;
+      }
     }
   }
   
@@ -138,7 +150,7 @@ function parseLinkedInResult(result: any): {
   
   return {
     name: name.substring(0, 60),
-    title: jobTitle || 'Professional',
+    title: title || 'Professional',
     company: company?.substring(0, 60) || 'Company',
     location,
     url,
@@ -220,66 +232,70 @@ serve(async (req) => {
       });
     }
 
-    console.log('Searching for leads with query:', query);
+    const searchQuery = query.trim();
+    console.log('Searching for leads with query:', searchQuery);
 
-    // Call Exa API with LinkedIn-focused search - request more results to filter
+    // Use the same approach as the main app: category "people" for LinkedIn profiles
+    // Also use structured summary extraction for better data quality
     const exaResponse = await fetch('https://api.exa.ai/search', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${exaApiKey}`,
+        'x-api-key': exaApiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: `${query} professional LinkedIn profile`,
+        query: searchQuery,
         type: 'neural',
-        useAutoprompt: true,
-        numResults: 25, // Request more to filter down to 5 good ones
+        category: 'people', // This targets LinkedIn profiles specifically
+        numResults: 15, // Request more to filter down to 5 good ones
         contents: {
           text: { maxCharacters: 1500 },
+          // Use structured summary to extract person data
+          summary: {
+            query: "Extract the person's professional information",
+            schema: {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "title": "Person Profile",
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "description": "Full name of the person" },
+                "jobTitle": { "type": "string", "description": "Current job title or role" },
+                "company": { "type": "string", "description": "Current company or employer" },
+                "location": { "type": "string", "description": "City and/or country" }
+              },
+              "required": ["name"]
+            }
+          }
         },
-        includeDomains: ['linkedin.com'],
       }),
     });
 
     if (!exaResponse.ok) {
       const errorText = await exaResponse.text();
-      console.error('Exa API error:', errorText);
+      console.error('Exa API error:', exaResponse.status, errorText);
       throw new Error('Failed to search for leads');
     }
 
     const exaData = await exaResponse.json();
     const results = exaData.results || [];
     
-    console.log(`Exa returned ${results.length} results, filtering...`);
+    console.log(`Exa returned ${results.length} results`);
 
-    // Filter and parse results - only keep valid profile pages
-    const validLeads: NonNullable<ReturnType<typeof parseLinkedInResult>>[] = [];
+    // Parse and filter results using the same approach as the main app
+    const validLeads: NonNullable<ReturnType<typeof parseLeadFromResult>>[] = [];
     
     for (const result of results) {
-      // Check URL is a profile
-      if (!isValidProfileUrl(result.url)) {
-        console.log('Skipping non-profile URL:', result.url);
-        continue;
-      }
-      
-      // Check content is valid
-      if (!isValidProfileContent(result)) {
-        console.log('Skipping invalid content:', result.title?.substring(0, 50));
-        continue;
-      }
-      
-      // Parse the result
-      const parsed = parseLinkedInResult(result);
-      if (parsed && parsed.name !== 'Unknown' && parsed.name.length >= 2) {
+      const parsed = parseLeadFromResult(result);
+      if (parsed) {
         validLeads.push(parsed);
-        console.log('Valid lead found:', parsed.name);
+        console.log('Valid lead found:', parsed.name, '-', parsed.title);
       }
       
       // Stop once we have 5 good leads
       if (validLeads.length >= 5) break;
     }
 
-    console.log(`Filtered to ${validLeads.length} valid leads`);
+    console.log(`Parsed ${validLeads.length} valid leads`);
 
     // Create blurred version for response (hide sensitive data)
     const blurredLeads = validLeads.map((lead) => ({
@@ -298,7 +314,7 @@ serve(async (req) => {
       .insert({
         email: email.toLowerCase(),
         magnet_type: 'free_leads',
-        input_data: { query },
+        input_data: { query: searchQuery },
         output_data: { 
           leads: validLeads, 
           count: validLeads.length,
