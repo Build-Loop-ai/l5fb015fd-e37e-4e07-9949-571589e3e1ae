@@ -137,7 +137,8 @@ export default function Auth() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="flex items-center gap-3"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
           >
             <div className="w-11 h-11 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-[0_0_30px_rgba(255,45,146,0.5)]">
               <div className="w-4 h-4 rounded-md bg-primary rotate-45 shadow-[0_0_10px_rgba(255,45,146,0.8)]" />
