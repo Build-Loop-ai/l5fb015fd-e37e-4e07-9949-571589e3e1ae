@@ -40,8 +40,8 @@ function FeatureItem({ icon: Icon, text, delay }: { icon: React.ElementType; tex
       transition={{ duration: 0.5, delay }}
       className="flex items-center gap-4 group"
     >
-      <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-colors">
-        <Icon className="w-5 h-5 text-white" />
+      <div className="w-12 h-12 rounded-2xl bg-primary/20 backdrop-blur-sm flex items-center justify-center border border-primary/30 group-hover:bg-primary/30 group-hover:border-primary/50 transition-all shadow-[0_0_20px_rgba(255,45,146,0.3)]">
+        <Icon className="w-5 h-5 text-primary" />
       </div>
       <span className="text-white/90 text-lg font-medium">{text}</span>
     </motion.div>
@@ -144,33 +144,59 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Brand/Marketing Panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary">
-        {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/80" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(255,255,255,0.15)_0%,_transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,_rgba(0,0,0,0.2)_0%,_transparent_50%)]" />
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#0a0a0a]">
+        {/* Base dark gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#12080d] to-[#0a0a0a]" />
         
-        {/* Floating decorative shapes */}
+        {/* Primary glow orbs */}
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/30 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-primary/20 blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/15 blur-[150px]" />
+        
+        {/* Secondary accent glows */}
+        <div className="absolute top-20 right-20 w-[200px] h-[200px] rounded-full bg-[#ff6b35]/20 blur-[80px]" />
+        <div className="absolute bottom-32 left-32 w-[150px] h-[150px] rounded-full bg-[#a855f7]/20 blur-[60px]" />
+        
+        {/* Grain texture overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.4] mix-blend-overlay pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        
+        {/* Radial vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)]" />
+        
+        {/* Floating decorative shapes with glow */}
         <FloatingShape 
-          className="absolute top-20 right-20 w-32 h-32 rounded-full bg-white/10 blur-xl" 
+          className="absolute top-20 right-20 w-32 h-32 rounded-full bg-primary/20 blur-2xl" 
           delay={0} 
         />
         <FloatingShape 
-          className="absolute bottom-40 left-20 w-48 h-48 rounded-full bg-white/5 blur-2xl" 
+          className="absolute bottom-40 left-20 w-48 h-48 rounded-full bg-primary/10 blur-3xl" 
           delay={1} 
         />
         <FloatingShape 
-          className="absolute top-1/2 right-1/3 w-24 h-24 rounded-3xl bg-white/10 blur-lg rotate-45" 
+          className="absolute top-1/2 right-1/3 w-24 h-24 rounded-3xl bg-white/5 blur-xl rotate-45" 
           delay={2} 
         />
         
-        {/* Grid pattern overlay */}
+        {/* Subtle grid pattern */}
         <div 
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
                              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px',
+            backgroundSize: '60px 60px',
+          }}
+        />
+        
+        {/* Scanline effect */}
+        <div 
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
           }}
         />
 
@@ -183,8 +209,8 @@ export default function Auth() {
             transition={{ duration: 0.6 }}
             className="flex items-center gap-3"
           >
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-              <div className="w-5 h-5 rounded-lg bg-white rotate-45" />
+            <div className="w-12 h-12 rounded-2xl bg-primary/20 backdrop-blur-sm flex items-center justify-center border border-primary/40 shadow-[0_0_30px_rgba(255,45,146,0.4)]">
+              <div className="w-5 h-5 rounded-lg bg-primary rotate-45 shadow-[0_0_15px_rgba(255,45,146,0.8)]" />
             </div>
             <span className="text-2xl font-bold text-white tracking-tight">LeadPulse</span>
           </motion.div>
@@ -215,7 +241,7 @@ export default function Auth() {
                       {[1, 2, 3, 4].map((i) => (
                         <div 
                           key={i}
-                          className="w-10 h-10 rounded-full bg-white/20 border-2 border-primary flex items-center justify-center text-xs font-bold text-white"
+                          className="w-10 h-10 rounded-full bg-primary/30 border-2 border-primary/50 flex items-center justify-center text-xs font-bold text-white shadow-[0_0_15px_rgba(255,45,146,0.3)]"
                         >
                           {String.fromCharCode(64 + i)}
                         </div>
@@ -236,8 +262,8 @@ export default function Auth() {
                   className="space-y-10"
                 >
                   <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                      <Sparkles className="w-4 h-4 text-white" />
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/30 shadow-[0_0_20px_rgba(255,45,146,0.3)]">
+                      <Sparkles className="w-4 h-4 text-primary" />
                       <span className="text-sm text-white font-medium">10 free leads included</span>
                     </div>
                     <h2 className="text-5xl xl:text-6xl font-bold text-white leading-tight">
@@ -267,15 +293,15 @@ export default function Auth() {
           >
             <div className="grid grid-cols-3 gap-8">
               <div>
-                <p className="text-3xl font-bold text-white">50K+</p>
+                <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-primary">50K+</p>
                 <p className="text-sm text-white/50">Leads generated</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-white">2.5x</p>
+                <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-primary">2.5x</p>
                 <p className="text-sm text-white/50">Reply rate increase</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-white">4.9★</p>
+                <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-primary">4.9★</p>
                 <p className="text-sm text-white/50">User rating</p>
               </div>
             </div>
