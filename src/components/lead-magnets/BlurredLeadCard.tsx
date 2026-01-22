@@ -81,14 +81,14 @@ export function BlurredLeadCard({ lead, index }: BlurredLeadCardProps) {
       </div>
 
       {/* Contact info - locked with premium styling */}
-      <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-border/30">
+      <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-border/30 max-w-full overflow-hidden">
         {lead.email_available && (
           <motion.div 
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/30"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/30 min-w-0 max-w-full"
           >
             <Mail className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs text-muted-foreground blur-[4px] select-none">email@***</span>
+            <span className="text-xs text-muted-foreground blur-[4px] select-none truncate max-w-[9rem]">email@***</span>
             <Lock className="w-3 h-3 text-primary/60" />
           </motion.div>
         )}
@@ -96,10 +96,10 @@ export function BlurredLeadCard({ lead, index }: BlurredLeadCardProps) {
         {lead.linkedin_available && (
           <motion.div 
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/30"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/30 min-w-0 max-w-full"
           >
             <Linkedin className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs text-muted-foreground blur-[4px] select-none">linkedin/***</span>
+            <span className="text-xs text-muted-foreground blur-[4px] select-none truncate max-w-[9rem]">linkedin/***</span>
             <Lock className="w-3 h-3 text-primary/60" />
           </motion.div>
         )}
@@ -107,10 +107,10 @@ export function BlurredLeadCard({ lead, index }: BlurredLeadCardProps) {
         {lead.phone_available && (
           <motion.div 
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/30"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/30 min-w-0 max-w-full"
           >
             <Phone className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs text-muted-foreground blur-[4px] select-none">+1 ***</span>
+            <span className="text-xs text-muted-foreground blur-[4px] select-none truncate max-w-[9rem]">+1 ***</span>
             <Lock className="w-3 h-3 text-primary/60" />
           </motion.div>
         )}
