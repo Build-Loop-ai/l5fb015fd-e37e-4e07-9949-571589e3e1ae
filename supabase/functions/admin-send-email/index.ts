@@ -85,6 +85,15 @@ Deno.serve(async (req) => {
 
     logStep('Sending email', { to, subject });
 
+    // Fetch email settings from platform_settings
+    const { data: emailSettings } = await adminClient
+      .from('platform_settings')
+      .select('key, value')
+      .in('key', ['email_from_name', 'email_from_address']);
+
+    const fromName = emailSettings?.find(s => s.key === 'email_from_name')?.value || 'LeadPulse';
+    const fromAddress = emailSettings?.find(s => s.key === 'email_from_address')?.value || 'onboarding@resend.dev';
+
     // Send email using Resend API directly
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -93,7 +102,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'LeadPulse <onboarding@resend.dev>',
+        from: `${fromName} <${fromAddress}>`,
         to: Array.isArray(to) ? to : [to],
         subject,
         html,

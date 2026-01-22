@@ -5,8 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const DASHBOARD_URL = 'https://l5fb015fd-e37e-4e07-9949-571589e3e1ae.lovable.app';
-
 interface EmailRequest {
   event_type: 'user_signup' | 'leads_found' | 'low_credits' | 'subscription_activated' | 'weekly_summary';
   user_id: string;
@@ -65,18 +63,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get user data
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user_id)
-      .single();
+    // Get user data and platform settings in parallel
+    const [profileResult, subscriptionResult, settingsResult] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', user_id).single(),
+      supabase.from('subscriptions').select('*').eq('user_id', user_id).single(),
+      supabase.from('platform_settings').select('key, value').in('key', ['email_from_name', 'email_from_address', 'dashboard_url', 'app_name'])
+    ]);
 
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', user_id)
-      .single();
+    const profile = profileResult.data;
+    const subscription = subscriptionResult.data;
+    const platformSettings = settingsResult.data || [];
+
+    // Extract platform settings
+    const getSetting = (key: string, fallback: string) => 
+      platformSettings.find(s => s.key === key)?.value || fallback;
+
+    const fromName = getSetting('email_from_name', 'LeadPulse');
+    const fromAddress = getSetting('email_from_address', 'onboarding@resend.dev');
+    const dashboardUrl = getSetting('dashboard_url', '');
+    const appName = getSetting('app_name', 'LeadPulse');
 
     const userName = profile?.full_name || profile?.email?.split('@')[0] || 'there';
     const userEmail = profile?.email;
@@ -95,7 +100,8 @@ Deno.serve(async (req) => {
       credits_remaining: String(subscription?.credits_limit - (subscription?.credits_used || 0) || 0),
       credits_limit: String(subscription?.credits_limit || 0),
       plan_name: subscription?.plan_id?.charAt(0).toUpperCase() + (subscription?.plan_id?.slice(1) || 'Free'),
-      dashboard_url: DASHBOARD_URL,
+      dashboard_url: dashboardUrl,
+      app_name: appName,
       lead_count: String(data.lead_count || 0),
       campaign_name: data.campaign_name || 'Your Campaign',
       leads_this_week: String(data.leads_this_week || 0),
@@ -171,7 +177,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'LeadPulse <onboarding@resend.dev>',
+        from: `${fromName} <${fromAddress}>`,
         to: [userEmail],
         subject,
         html: bodyWithTracking,
