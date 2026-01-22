@@ -173,6 +173,155 @@ export type Database = {
         }
         Relationships: []
       }
+      email_log: {
+        Row: {
+          body_sent: string
+          clicked_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          sequence_id: string | null
+          status: string | null
+          subject: string
+          template_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          body_sent: string
+          clicked_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string | null
+          subject: string
+          template_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          body_sent?: string
+          clicked_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email?: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string | null
+          subject?: string
+          template_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "email_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_sequences: {
+        Row: {
+          created_at: string
+          delay_minutes: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          template_id: string | null
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          template_id?: string | null
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          template_id?: string | null
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sequences_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body_html: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          body_html: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          body_html?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       lead_magnet_submissions: {
         Row: {
           converted_to_user: boolean | null

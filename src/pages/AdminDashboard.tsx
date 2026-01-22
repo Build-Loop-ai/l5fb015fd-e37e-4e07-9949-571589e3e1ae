@@ -28,12 +28,18 @@ import {
   Send,
   Clock,
   User,
+  LayoutTemplate,
+  Zap,
+  History,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { PlanDistributionChart } from '@/components/admin/PlanDistributionChart';
 import { TimeSeriesChart } from '@/components/admin/TimeSeriesChart';
 import { LeadStatusChart } from '@/components/admin/LeadStatusChart';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
+import { EmailSequenceManager } from '@/components/admin/EmailSequenceManager';
+import { EmailHistoryTable } from '@/components/admin/EmailHistoryTable';
 import {
   PulseOrb,
   SparkBurst,
@@ -378,15 +384,15 @@ export default function AdminDashboard() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Email Outreach</h2>
+                <h2 className="text-2xl font-bold text-foreground">Email Marketing</h2>
                 <p className="text-sm text-muted-foreground">
-                  {stats.outreach?.sent || 0} sent • {stats.outreach?.total || 0} total messages
+                  Manage templates, sequences, and send emails to users
                 </p>
               </div>
               <div className="flex gap-3">
                 <Button onClick={() => setShowComposeEmail(true)} className="apple-button">
                   <Send className="mr-2 h-4 w-4" />
-                  Send Email to Users
+                  Quick Send
                 </Button>
                 <Button onClick={refetch} className="apple-button-secondary h-10">
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -395,53 +401,49 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Stats overview */}
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="stat-card p-5">
-                <div className="flex items-center gap-3">
-                  <div className="visual-badge">
-                    <Send className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{stats.outreach?.sent || 0}</p>
-                    <p className="text-xs text-muted-foreground">Emails Sent</p>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card p-5">
-                <div className="flex items-center gap-3">
-                  <div className="visual-badge">
-                    <Clock className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{stats.outreach?.draft || 0}</p>
-                    <p className="text-xs text-muted-foreground">Drafts</p>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card p-5">
-                <div className="flex items-center gap-3">
-                  <div className="visual-badge">
-                    <User className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{stats.users?.length || 0}</p>
-                    <p className="text-xs text-muted-foreground">Users to Contact</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Tabs defaultValue="history" className="space-y-6">
+              <TabsList className="bg-card/50 border border-border/50">
+                <TabsTrigger value="history" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Email History
+                </TabsTrigger>
+                <TabsTrigger value="templates" className="flex items-center gap-2">
+                  <LayoutTemplate className="h-4 w-4" />
+                  Templates
+                </TabsTrigger>
+                <TabsTrigger value="sequences" className="flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Sequences
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="history">
+                <EmailHistoryTable />
+              </TabsContent>
+              
+              <TabsContent value="templates">
+                <EmailTemplateEditor />
+              </TabsContent>
+              
+              <TabsContent value="sequences">
+                <EmailSequenceManager />
+              </TabsContent>
+            </Tabs>
+          </motion.div>
+        );
 
-            {/* Recent outreach messages */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Recent Outreach Messages</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                {stats.outreach?.items?.map((message: any, index: number) => (
-                  <OutreachCard key={message.id} message={message} index={index} />
-                ))}
-                {(!stats.outreach?.items || stats.outreach.items.length === 0) && (
-                  <div className="col-span-2 stat-card p-12 flex flex-col items-center justify-center">
-                    <Mail className="w-12 h-12 text-muted-foreground/50 mb-3" />
+      case 'users':
+        return (
+          <motion.div
+            key="users"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">All Users</h2>
                     <p className="text-muted-foreground">No outreach messages yet</p>
                     <p className="text-sm text-muted-foreground mt-1">Users can send emails from their Lead Detail view</p>
                   </div>

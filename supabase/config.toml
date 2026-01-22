@@ -35,3 +35,12 @@ verify_jwt = false
 
 [functions.admin-send-email]
 verify_jwt = false
+
+[functions.admin-stats]
+verify_jwt = false
+
+[functions.send-automated-email]
+verify_jwt = false
+
+[functions.track-email]
+verify_jwt = false

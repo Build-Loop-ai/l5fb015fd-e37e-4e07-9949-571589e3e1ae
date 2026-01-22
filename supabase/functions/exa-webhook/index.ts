@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
         // Get subscription ID for credit_usage logs
         const { data: subscription } = await supabase
           .from('subscriptions')
-          .select('id')
+          .select('id, credits_limit, credits_used')
           .eq('user_id', userId)
           .single();
 
@@ -200,6 +200,52 @@ Deno.serve(async (req) => {
 
           if (logError) {
             console.error('Error logging credit usage:', logError);
+          }
+
+          // 🚀 TRIGGER: Send "leads_found" email notification
+          const campaignName = searchRecord?.query || 'Your Campaign';
+          try {
+            const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-automated-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseKey}`,
+              },
+              body: JSON.stringify({
+                event_type: 'leads_found',
+                user_id: userId,
+                data: {
+                  lead_count: savedCount,
+                  campaign_name: campaignName,
+                },
+              }),
+            });
+            console.log('Leads found email trigger response:', emailResponse.status);
+          } catch (emailError) {
+            console.error('Error triggering leads_found email:', emailError);
+          }
+
+          // 🚀 TRIGGER: Check for low credits and send warning
+          const creditsRemaining = (subscription.credits_limit || 0) - (subscription.credits_used || 0) - savedCount;
+          const creditsThreshold = (subscription.credits_limit || 0) * 0.1; // 10% threshold
+          
+          if (creditsRemaining <= creditsThreshold && creditsRemaining > 0) {
+            try {
+              const lowCreditResponse = await fetch(`${supabaseUrl}/functions/v1/send-automated-email`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({
+                  event_type: 'low_credits',
+                  user_id: userId,
+                }),
+              });
+              console.log('Low credits email trigger response:', lowCreditResponse.status);
+            } catch (emailError) {
+              console.error('Error triggering low_credits email:', emailError);
+            }
           }
         }
       }
