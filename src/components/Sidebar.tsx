@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { GlowDot, AbstractBlob } from './ui/visual-elements';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBrandConfig } from '@/hooks/useBrandConfig';
 import { PLANS, PlanId } from '@/lib/plans';
 import { Button } from './ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -72,6 +73,7 @@ function NavVisual({ type, active }: { type: string; active: boolean }) {
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const { user, subscription, subscriptionLoading, signOut } = useAuth();
+  const { appName, tagline } = useBrandConfig();
   const navigate = useNavigate();
 
   const currentPlan = PLANS[subscription?.plan_id as PlanId] || PLANS.free;
@@ -97,8 +99,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             <GlowDot className="absolute -top-0.5 -right-0.5 w-3 h-3" color="success" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground tracking-tight">LeadPulse</h1>
-            <p className="text-xs text-muted-foreground font-medium tracking-wide">AI-Powered Outreach</p>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">{appName}</h1>
+            <p className="text-xs text-muted-foreground font-medium tracking-wide">{tagline}</p>
           </div>
         </div>
       </div>

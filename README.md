@@ -1,73 +1,80 @@
-# Welcome to your Lovable project
+# LeadPulse - AI-Powered Lead Generation SaaS
 
-## Project info
+A production-ready, remix-friendly SaaS template for AI-powered lead generation and outreach.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Quick Start (Remix in 5 Minutes)
 
-## How can I edit this code?
+### 1. Remix the Project
+Click "Remix" in Lovable to create your own copy.
 
-There are several ways of editing your application.
+### 2. Configure Platform Settings
+Go to `/admin` → **Platform Settings** and update:
+- **Branding**: App name, tagline
+- **Email**: Sender name, sender email, dashboard URL
+- **Stripe**: Your product/price IDs
+- **Legal**: Support email, privacy email
 
-**Use Lovable**
+### 3. Add API Keys
+In Lovable Cloud → **Secrets**, add these keys:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| Secret | Required | Get From |
+|--------|----------|----------|
+| `STRIPE_SECRET_KEY` | ✅ | [Stripe Dashboard](https://dashboard.stripe.com/apikeys) |
+| `RESEND_API_KEY` | ✅ | [Resend](https://resend.com/api-keys) |
+| `EXA_API_KEY` | ✅ | [Exa AI](https://exa.ai) |
+| `APIFY_API_KEY` | ✅ | [Apify Console](https://console.apify.com/account/integrations) |
+| `GOOGLE_CLIENT_ID` | Optional | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `GOOGLE_CLIENT_SECRET` | Optional | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
 
-Changes made via Lovable will be committed automatically to this repo.
+### 4. Create Stripe Products
+Create your subscription products in Stripe, then update the price IDs in Admin → Platform Settings.
 
-**Use your preferred IDE**
+### 5. Publish!
+Click **Publish** in Lovable to go live.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## ✨ Features
 
-Follow these steps:
+- **AI Lead Search** - Natural language search powered by Exa AI
+- **LinkedIn Enrichment** - Automatic profile enrichment via Apify
+- **Campaign Management** - Organize leads into targeted campaigns
+- **Email Outreach** - Gmail integration for personalized outreach
+- **Subscription Billing** - Stripe-powered subscriptions with usage limits
+- **Admin Dashboard** - User management, analytics, email templates
+- **Dynamic Branding** - Change app name/branding from admin panel
+- **Google OAuth** - One-click social login
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🛠 Tech Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Frontend**: React, Vite, TypeScript, Tailwind CSS, Framer Motion
+- **Backend**: Lovable Cloud (Supabase), Edge Functions
+- **Payments**: Stripe
+- **Email**: Resend + Gmail OAuth
+- **AI**: Exa AI, Apify
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 📁 Project Structure
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/     # Reusable UI components
+├── contexts/       # React contexts (Auth)
+├── hooks/          # Custom hooks
+├── lib/            # Utilities and configs
+├── pages/          # Route pages
+└── integrations/   # Supabase client
+
+supabase/
+└── functions/      # Edge functions (API endpoints)
 ```
 
-**Edit a file directly in GitHub**
+## 🔐 Security
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Row Level Security (RLS) on all tables
+- Leaked password protection (HIBP)
+- GDPR-compliant account deletion
+- Secure OAuth token storage
 
-**Use GitHub Codespaces**
+## 📄 License
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+MIT - Feel free to use this template for your own SaaS!

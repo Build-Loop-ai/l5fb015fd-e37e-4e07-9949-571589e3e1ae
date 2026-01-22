@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
+import { useBrandConfig } from '@/hooks/useBrandConfig';
 
 interface OnboardingChecklistProps {
   onCreateCampaign: () => void;
@@ -22,6 +23,7 @@ export function OnboardingChecklist({
   onNavigateToLeads,
 }: OnboardingChecklistProps) {
   const progress = useOnboardingProgress();
+  const { appName } = useBrandConfig();
   const [isExpanded, setIsExpanded] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
 
@@ -95,7 +97,7 @@ export function OnboardingChecklist({
             <Sparkles className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Get Started with LeadPulse</h3>
+            <h3 className="font-semibold text-foreground">Get Started with {appName}</h3>
             <p className="text-sm text-muted-foreground">
               {progress.completedCount} of {progress.totalSteps} steps completed
             </p>

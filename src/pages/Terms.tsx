@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useBrandConfig } from '@/hooks/useBrandConfig';
 
 export default function Terms() {
   const navigate = useNavigate();
+  const { appName, supportEmail } = useBrandConfig();
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,7 +24,7 @@ export default function Terms() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <div className="w-3 h-3 rounded-full bg-primary-foreground/90" />
             </div>
-            <span className="font-semibold text-foreground">LeadPulse</span>
+            <span className="font-semibold text-foreground">{appName}</span>
           </div>
         </div>
       </header>
@@ -36,7 +38,7 @@ export default function Terms() {
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground leading-relaxed">
-              By accessing or using LeadPulse ("the Service"), you agree to be bound by these Terms of Service. 
+              By accessing or using {appName} ("the Service"), you agree to be bound by these Terms of Service. 
               If you do not agree to these terms, please do not use the Service. We reserve the right to update 
               these terms at any time, and your continued use of the Service constitutes acceptance of any changes.
             </p>
@@ -45,7 +47,7 @@ export default function Terms() {
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4">2. Description of Service</h2>
             <p className="text-muted-foreground leading-relaxed">
-              LeadPulse is an AI-powered lead generation and outreach platform that helps businesses discover, 
+              {appName} is an AI-powered lead generation and outreach platform that helps businesses discover, 
               enrich, and engage with potential customers. The Service includes lead finding, data enrichment, 
               campaign management, and outreach automation features.
             </p>
@@ -99,7 +101,7 @@ export default function Terms() {
             <h2 className="text-2xl font-semibold text-foreground mb-4">7. Intellectual Property</h2>
             <p className="text-muted-foreground leading-relaxed">
               The Service and its original content, features, and functionality are and will remain the exclusive 
-              property of LeadPulse and its licensors. Our trademarks may not be used in connection with any 
+              property of {appName} and its licensors. Our trademarks may not be used in connection with any 
               product or service without our prior written consent.
             </p>
           </section>
@@ -116,7 +118,7 @@ export default function Terms() {
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4">9. Limitation of Liability</h2>
             <p className="text-muted-foreground leading-relaxed">
-              To the maximum extent permitted by law, LeadPulse shall not be liable for any indirect, incidental, 
+              To the maximum extent permitted by law, {appName} shall not be liable for any indirect, incidental, 
               special, consequential, or punitive damages, including loss of profits, data, or business opportunities, 
               arising out of or in connection with your use of the Service.
             </p>
@@ -143,7 +145,7 @@ export default function Terms() {
             <h2 className="text-2xl font-semibold text-foreground mb-4">12. Governing Law</h2>
             <p className="text-muted-foreground leading-relaxed">
               These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in 
-              which LeadPulse operates, without regard to its conflict of law provisions.
+              which {appName} operates, without regard to its conflict of law provisions.
             </p>
           </section>
 
@@ -151,7 +153,7 @@ export default function Terms() {
             <h2 className="text-2xl font-semibold text-foreground mb-4">13. Contact Us</h2>
             <p className="text-muted-foreground leading-relaxed">
               If you have any questions about these Terms, please contact us through the contact form on our website 
-              or at support@leadpulse.com.
+              or at {supportEmail}.
             </p>
           </section>
         </div>
@@ -160,7 +162,7 @@ export default function Terms() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-8 mt-12">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between text-sm text-muted-foreground">
-          <p>© 2025 LeadPulse. All rights reserved.</p>
+          <p>© 2025 {appName}. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
             <button 
