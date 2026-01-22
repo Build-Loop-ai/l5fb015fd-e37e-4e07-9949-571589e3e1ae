@@ -389,38 +389,24 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="relative p-5 rounded-2xl overflow-hidden"
+                  className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20"
                 >
-                  {/* Background gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent" />
-                  <div className="absolute inset-px rounded-2xl bg-background/50 backdrop-blur-xl" />
-                  
-                  {/* Border gradient */}
-                  <div className="absolute inset-0 rounded-2xl border border-primary/30" />
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                  
-                  <div className="relative flex items-start gap-4">
-                    <div className="relative shrink-0">
-                      <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md" />
-                      <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30">
-                        <Sparkles className="w-6 h-6 text-primary-foreground" />
-                      </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 text-primary" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-foreground text-lg">Unlock full contact details</h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Get verified emails, phone numbers, LinkedIn + 250 leads/month
-                      </p>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-foreground text-sm">Unlock full details</h4>
+                      <p className="text-xs text-muted-foreground">Emails, phones, LinkedIn + 250/mo</p>
                     </div>
                   </div>
                   
                   <Button 
                     onClick={handleSignUp} 
-                    className="relative w-full mt-4 h-12 rounded-xl apple-button group"
+                    className="w-full h-11 rounded-lg apple-button text-sm"
                   >
                     Start Free Trial
-                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </motion.div>
               </motion.div>
