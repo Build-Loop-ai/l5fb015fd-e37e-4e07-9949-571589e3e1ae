@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,13 +69,15 @@ function SettingRow({ label, description, children }: SettingRowProps) {
 
 export function SettingsPage() {
   const { toast } = useToast();
-  const { user, subscription, subscriptionLoading, refreshSubscription, session } = useAuth();
+  const { user, subscription, subscriptionLoading, refreshSubscription, session, signOut } = useAuth();
+  const navigate = useNavigate();
   
   // Enable realtime subscription updates
   useSubscriptionRealtime();
   
   const [showPricing, setShowPricing] = useState(false);
   const [managingBilling, setManagingBilling] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   
   const [profile, setProfile] = useState({
     name: user?.user_metadata?.full_name || 'User',
@@ -171,12 +174,52 @@ export function SettingsPage() {
     }
   };
 
-  const handleDeleteAllData = () => {
-    toast({
-      title: 'Data deletion requested',
-      description: 'This feature requires backend implementation.',
-      variant: 'destructive',
-    });
+  const handleDeleteAllData = async () => {
+    try {
+      const { error } = await supabase.from('leads').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      toast({
+        title: 'Data deleted',
+        description: 'All your leads have been permanently deleted.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete leads. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      
+      toast({
+        title: 'Account deleted',
+        description: 'Your account and all data have been permanently deleted.',
+      });
+      
+      // Sign out and redirect to landing page
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Delete account error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete account. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   return (
@@ -478,24 +521,31 @@ export function SettingsPage() {
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="rounded-xl">
-                    Delete Account
+                  <Button variant="destructive" className="rounded-xl" disabled={deletingAccount}>
+                    {deletingAccount ? (
+                      <>
+                        <div className="apple-spinner w-4 h-4 mr-2" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete Account'
+                    )}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="apple-dialog">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. Your account and all associated data will be permanently deleted.
+                      This action cannot be undone. Your account and all associated data (leads, campaigns, email connections, subscription) will be permanently deleted.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
                     <AlertDialogAction 
-                      onClick={handleDeleteAllData}
+                      onClick={handleDeleteAccount}
                       className="rounded-xl bg-destructive hover:bg-destructive/90"
                     >
-                      Delete Account
+                      Yes, Delete Everything
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

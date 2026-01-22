@@ -130,6 +130,22 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
       {/* Footer */}
       <div className="p-5 border-t border-sidebar-border space-y-4">
+        {/* Low Credit Warning */}
+        {!subscriptionLoading && creditsLimit > 0 && (creditsLimit - creditsUsed) / creditsLimit <= 0.1 && (
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive/10 border border-destructive/20">
+            <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+            <p className="text-xs text-destructive font-medium">
+              {creditsUsed >= creditsLimit ? 'No credits remaining' : 'Low credits remaining'}
+            </p>
+            <button
+              onClick={() => onTabChange('settings')}
+              className="ml-auto text-xs text-destructive font-semibold hover:underline"
+            >
+              Upgrade
+            </button>
+          </div>
+        )}
+
         {/* Plan Card */}
         <div className="glass-strong rounded-2xl p-5 relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-24 h-24 opacity-30">
