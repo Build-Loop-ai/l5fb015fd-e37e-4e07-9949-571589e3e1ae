@@ -6,6 +6,16 @@ import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Users,
   DollarSign,
@@ -15,6 +25,9 @@ import {
   Search,
   MessageSquare,
   CheckCircle,
+  Send,
+  Clock,
+  User,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { PlanDistributionChart } from '@/components/admin/PlanDistributionChart';
@@ -202,12 +215,63 @@ function ContactCard({ contact, index, onMarkRead }: { contact: any; index: numb
   );
 }
 
+// Outreach message card
+function OutreachCard({ message, index }: { message: any; index: number }) {
+  const isSent = message.status === 'sent';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      className="p-5 rounded-2xl border border-border/50 bg-card/30 transition-all hover:border-primary/40"
+    >
+      <div className="flex items-start gap-4">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isSent ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-muted border border-border'}`}>
+          {isSent ? (
+            <CheckCircle className="w-5 h-5 text-emerald-400" />
+          ) : (
+            <Clock className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="font-medium text-foreground truncate">{message.subject || 'No subject'}</p>
+            <Badge className={isSent ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-muted text-muted-foreground'}>
+              {message.status}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">
+            To: {message.leads?.name || 'Unknown'} ({message.leads?.email || 'No email'})
+          </p>
+          <p className="text-sm text-foreground/70 line-clamp-2">{message.body}</p>
+          <div className="flex items-center gap-4 mt-3">
+            <span className="text-xs text-muted-foreground">
+              {message.sent_at 
+                ? format(new Date(message.sent_at), 'MMM d, yyyy • h:mm a')
+                : format(new Date(message.created_at), 'MMM d, yyyy • h:mm a')}
+            </span>
+            {message.leads?.company && (
+              <span className="text-xs text-primary">{message.leads.company}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, session } = useAuth();
   const { isAdmin, loading, stats, refetch } = useAdminCheck();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showComposeEmail, setShowComposeEmail] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Show loading while auth or admin check is in progress
   if (authLoading || loading) {
@@ -231,6 +295,51 @@ export default function AdminDashboard() {
   if (!isAdmin || !stats) {
     return null;
   }
+
+  const handleSendEmail = async () => {
+    if (!emailRecipient || !emailSubject || !emailBody) {
+      toast({
+        title: 'Missing fields',
+        description: 'Please fill in all email fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-send-email', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: {
+          to: emailRecipient,
+          subject: emailSubject,
+          html: emailBody.replace(/\n/g, '<br>'),
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Email sent!',
+        description: `Successfully sent to ${emailRecipient}`,
+      });
+      setShowComposeEmail(false);
+      setEmailRecipient('');
+      setEmailSubject('');
+      setEmailBody('');
+    } catch (error) {
+      console.error('Send email error:', error);
+      toast({
+        title: 'Failed to send',
+        description: 'Please try again or check the Resend configuration.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const handleMarkRead = async (id: string) => {
     try {
@@ -258,6 +367,90 @@ export default function AdminDashboard() {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'emails':
+        return (
+          <motion.div
+            key="emails"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Email Outreach</h2>
+                <p className="text-sm text-muted-foreground">
+                  {stats.outreach?.sent || 0} sent • {stats.outreach?.total || 0} total messages
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={() => setShowComposeEmail(true)} className="apple-button">
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Email to Users
+                </Button>
+                <Button onClick={refetch} className="apple-button-secondary h-10">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+
+            {/* Stats overview */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="stat-card p-5">
+                <div className="flex items-center gap-3">
+                  <div className="visual-badge">
+                    <Send className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.outreach?.sent || 0}</p>
+                    <p className="text-xs text-muted-foreground">Emails Sent</p>
+                  </div>
+                </div>
+              </div>
+              <div className="stat-card p-5">
+                <div className="flex items-center gap-3">
+                  <div className="visual-badge">
+                    <Clock className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.outreach?.draft || 0}</p>
+                    <p className="text-xs text-muted-foreground">Drafts</p>
+                  </div>
+                </div>
+              </div>
+              <div className="stat-card p-5">
+                <div className="flex items-center gap-3">
+                  <div className="visual-badge">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.users?.length || 0}</p>
+                    <p className="text-xs text-muted-foreground">Users to Contact</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent outreach messages */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">Recent Outreach Messages</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {stats.outreach?.items?.map((message: any, index: number) => (
+                  <OutreachCard key={message.id} message={message} index={index} />
+                ))}
+                {(!stats.outreach?.items || stats.outreach.items.length === 0) && (
+                  <div className="col-span-2 stat-card p-12 flex flex-col items-center justify-center">
+                    <Mail className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground">No outreach messages yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Users can send emails from their Lead Detail view</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        );
+
       case 'contacts':
         return (
           <motion.div
@@ -638,6 +831,79 @@ export default function AdminDashboard() {
           {renderContent()}
         </main>
       </div>
+
+      {/* Compose Email Dialog */}
+      <Dialog open={showComposeEmail} onOpenChange={setShowComposeEmail}>
+        <DialogContent className="sm:max-w-lg apple-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Send Email to Users
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email-recipient">Recipient Email</Label>
+              <Input
+                id="email-recipient"
+                placeholder="user@example.com"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                className="apple-input"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the email address of the user you want to contact
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-subject">Subject</Label>
+              <Input
+                id="email-subject"
+                placeholder="Welcome to LeadPulse!"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                className="apple-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-body">Message</Label>
+              <Textarea
+                id="email-body"
+                placeholder="Write your message here..."
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                className="apple-input min-h-[150px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowComposeEmail(false)}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSendEmail} 
+              disabled={sendingEmail}
+              className="apple-button"
+            >
+              {sendingEmail ? (
+                <>
+                  <div className="apple-spinner w-4 h-4 mr-2" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

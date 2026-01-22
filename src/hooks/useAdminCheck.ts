@@ -63,6 +63,20 @@ interface AdminStats {
     total: number;
     sent: number;
     draft: number;
+    items: Array<{
+      id: string;
+      subject: string | null;
+      body: string;
+      status: string;
+      sent_at: string | null;
+      created_at: string;
+      leads: {
+        name: string;
+        email: string | null;
+        user_id: string;
+        company: string | null;
+      } | null;
+    }>;
   };
   charts: {
     dailySignups: Array<{ date: string; count: number }>;

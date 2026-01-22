@@ -12,6 +12,8 @@ import {
   ArrowLeft,
   Settings,
   Target,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -26,6 +28,7 @@ interface AdminSidebarProps {
 const navItems = [
   { id: 'overview', label: 'Overview', icon: BarChart3, visual: 'bars' },
   { id: 'users', label: 'Users', icon: Users, visual: 'dots' },
+  { id: 'emails', label: 'Emails', icon: Send, visual: 'mail' },
   { id: 'contacts', label: 'Contacts', icon: MessageSquare, visual: 'pulse', hasNotification: true },
   { id: 'revenue', label: 'Revenue', icon: CreditCard, visual: 'arrow' },
   { id: 'analytics', label: 'Analytics', icon: TrendingUp, visual: 'chart' },
@@ -72,6 +75,13 @@ function NavVisual({ type, active }: { type: string; active: boolean }) {
           <div className={cn('w-1 rounded-t-full transition-all', active ? 'h-5 bg-primary' : 'h-4 bg-muted-foreground/60')} />
           <div className={cn('w-1 rounded-t-full transition-all', active ? 'h-2 bg-primary' : 'h-1.5 bg-muted-foreground/60')} />
           <div className={cn('w-1 rounded-t-full transition-all', active ? 'h-4 bg-primary' : 'h-3 bg-muted-foreground/60')} />
+        </div>
+      );
+    case 'mail':
+      return (
+        <div className="w-5 h-5 relative flex items-center justify-center">
+          <div className={cn('w-4 h-3 rounded-sm border-2 transition-all', active ? 'border-primary' : 'border-muted-foreground/60')} />
+          <div className={cn('absolute w-2 h-1.5 top-1 border-l-2 border-r-2 rotate-0 transition-all', active ? 'border-primary' : 'border-muted-foreground/60')} style={{ borderBottom: 'none', borderTop: 'none', transform: 'rotate(0deg) translateY(-1px)' }} />
         </div>
       );
     default:
