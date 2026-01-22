@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -122,6 +122,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
+
+    // Trigger welcome email for new users
+    if (!error && data.user) {
+      supabase.functions.invoke('send-automated-email', {
+        body: { event_type: 'user_signup', user_id: data.user.id }
+      }).catch((err) => {
+        console.error('Failed to send welcome email:', err);
+      });
+    }
 
     return { error: error ? new Error(error.message) : null };
   };

@@ -159,6 +159,22 @@ serve(async (req) => {
           to: planId 
         });
         resetCredits = true;
+        
+        // Trigger subscription activated email for upgrades from free
+        if (existingSub.plan_id === 'free' && planId !== 'free') {
+          logStep("Triggering subscription_activated email");
+          fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-automated-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            },
+            body: JSON.stringify({
+              event_type: 'subscription_activated',
+              user_id: user.id,
+            }),
+          }).catch((err) => logStep("Failed to send subscription email", err));
+        }
       }
     }
 
