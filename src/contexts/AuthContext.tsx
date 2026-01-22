@@ -48,6 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Failed to check subscription:', error);
+        // Set default free subscription on error
+        setSubscription({
+          subscribed: false,
+          plan_id: 'free',
+          plan_name: 'Free',
+          credits_limit: 10,
+          credits_used: 0,
+          subscription_end: null,
+        });
         return;
       }
 
