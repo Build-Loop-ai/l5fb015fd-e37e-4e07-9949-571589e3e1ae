@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useBrandConfig } from '@/hooks/useBrandConfig';
 
 export default function Privacy() {
   const navigate = useNavigate();
+  const { appName, privacyEmail } = useBrandConfig();
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,7 +24,7 @@ export default function Privacy() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <div className="w-3 h-3 rounded-full bg-primary-foreground/90" />
             </div>
-            <span className="font-semibold text-foreground">LeadPulse</span>
+            <span className="font-semibold text-foreground">{appName}</span>
           </div>
         </div>
       </header>
@@ -36,7 +38,7 @@ export default function Privacy() {
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4">1. Introduction</h2>
             <p className="text-muted-foreground leading-relaxed">
-              LeadPulse ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains 
+              {appName} ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains 
               how we collect, use, disclose, and safeguard your information when you use our lead generation and 
               outreach platform (the "Service").
             </p>
@@ -188,7 +190,7 @@ export default function Privacy() {
             <h2 className="text-2xl font-semibold text-foreground mb-4">14. Contact Us</h2>
             <p className="text-muted-foreground leading-relaxed">
               If you have any questions about this Privacy Policy or wish to exercise your rights, please contact 
-              us through the contact form on our website or at privacy@leadpulse.com.
+              us through the contact form on our website or at {privacyEmail}.
             </p>
           </section>
         </div>
@@ -197,7 +199,7 @@ export default function Privacy() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-8 mt-12">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between text-sm text-muted-foreground">
-          <p>© 2025 LeadPulse. All rights reserved.</p>
+          <p>© 2025 {appName}. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
             <button 

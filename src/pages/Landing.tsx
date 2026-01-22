@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBrandConfig } from '@/hooks/useBrandConfig';
 import { ContactDialog } from '@/components/ContactDialog';
 import { FreeLeadSampleModal } from '@/components/lead-magnets/FreeLeadSampleModal';
 import { Users, Sparkles } from 'lucide-react';
@@ -224,6 +225,7 @@ function StepItem({ number, title, description, index }: { number: number; title
 export default function Landing() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { appName } = useBrandConfig();
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isFreeLeadSampleOpen, setIsFreeLeadSampleOpen] = useState(false);
   const heroRef = useRef(null);
@@ -280,7 +282,7 @@ export default function Landing() {
                     <div className="w-4 h-4 rounded-full bg-white/90 shadow-inner" />
                   </div>
                 </div>
-                <span className="text-lg font-semibold text-foreground tracking-tight truncate">LeadPulse</span>
+                <span className="text-lg font-semibold text-foreground tracking-tight truncate">{appName}</span>
               </div>
               
               {/* Center: Nav Links (always centered) */}
@@ -551,7 +553,7 @@ export default function Landing() {
             <span className="gradient-text">your outreach?</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
-            Join thousands of sales teams already using LeadPulse to find and convert their ideal customers.
+            Join thousands of sales teams already using {appName} to find and convert their ideal customers.
           </p>
           <Button onClick={() => navigate('/auth')} size="lg" className="apple-button h-14 px-10 text-lg gap-2">
             Start Your Free Trial
@@ -569,7 +571,7 @@ export default function Landing() {
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <div className="w-3 h-3 rounded-full bg-primary-foreground/90" />
             </div>
-            <span className="font-medium text-foreground">LeadPulse</span>
+            <span className="font-medium text-foreground">{appName}</span>
           </div>
           
           <div className="flex items-center gap-8 text-sm text-muted-foreground">
@@ -584,7 +586,7 @@ export default function Landing() {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            © 2025 LeadPulse. All rights reserved.
+            © 2025 {appName}. All rights reserved.
           </p>
         </div>
       </footer>
