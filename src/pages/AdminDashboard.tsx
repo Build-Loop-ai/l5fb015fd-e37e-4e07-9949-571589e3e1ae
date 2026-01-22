@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useBrandConfig } from '@/hooks/useBrandConfig';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -272,6 +273,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading, session } = useAuth();
   const { isAdmin, loading, stats, refetch } = useAdminCheck();
+  const { appName } = useBrandConfig();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [showComposeEmail, setShowComposeEmail] = useState(false);
@@ -853,7 +855,7 @@ export default function AdminDashboard() {
               <Label htmlFor="email-subject">Subject</Label>
               <Input
                 id="email-subject"
-                placeholder="Welcome to LeadPulse!"
+                placeholder={`Welcome to ${appName}!`}
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
                 className="apple-input"
