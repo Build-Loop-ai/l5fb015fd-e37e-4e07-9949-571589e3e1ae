@@ -249,7 +249,7 @@ export default function Landing() {
                     <div className="w-4 h-4 rounded-full bg-white/90 shadow-inner" />
                   </div>
                 </div>
-                <span className="text-lg font-semibold text-foreground tracking-tight truncate">LeadFlow</span>
+                <span className="text-lg font-semibold text-foreground tracking-tight truncate">LeadPulse</span>
               </div>
               
               {/* Center: Nav Links (always centered) */}
@@ -520,7 +520,7 @@ export default function Landing() {
             <span className="gradient-text">your outreach?</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
-            Join thousands of sales teams already using LeadFlow to find and convert their ideal customers.
+            Join thousands of sales teams already using LeadPulse to find and convert their ideal customers.
           </p>
           <Button onClick={() => navigate('/auth')} size="lg" className="apple-button h-14 px-10 text-lg gap-2">
             Start Your Free Trial
@@ -538,12 +538,12 @@ export default function Landing() {
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <div className="w-3 h-3 rounded-full bg-primary-foreground/90" />
             </div>
-            <span className="font-medium text-foreground">LeadFlow</span>
+            <span className="font-medium text-foreground">LeadPulse</span>
           </div>
           
           <div className="flex items-center gap-8 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Terms</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
             <button 
               onClick={() => setIsContactOpen(true)} 
               className="hover:text-foreground transition-colors"
@@ -553,7 +553,7 @@ export default function Landing() {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            © 2027 LeadFlow. All rights reserved.
+            © 2025 LeadPulse. All rights reserved.
           </p>
         </div>
       </footer>

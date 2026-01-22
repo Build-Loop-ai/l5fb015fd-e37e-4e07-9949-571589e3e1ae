@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Download } from 'lucide-react';
+import { exportLeadsToCSV } from '@/lib/csv-export';
+import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,10 +53,30 @@ export function LeadTable({
   onStatusChange, 
   onDelete 
 }: LeadTableProps) {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<keyof Lead>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const handleExport = () => {
+    if (filteredLeads.length === 0) {
+      toast({
+        title: 'No leads to export',
+        description: 'There are no leads matching your current filters.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const campaignName = selectedCampaign?.name?.replace(/\s+/g, '-').toLowerCase() || 'all-leads';
+    exportLeadsToCSV(filteredLeads, campaignName);
+    
+    toast({
+      title: 'Export complete',
+      description: `Exported ${filteredLeads.length} leads to CSV.`,
+    });
+  };
 
   const filteredLeads = leads
     .filter(lead => {
@@ -145,6 +167,18 @@ export function LeadTable({
             ))}
           </SelectContent>
         </Select>
+
+        {/* Export Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          className="gap-2 rounded-xl"
+          disabled={filteredLeads.length === 0}
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </Button>
       </div>
 
       {/* Campaign Info Banner */}
