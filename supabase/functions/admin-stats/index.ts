@@ -95,10 +95,11 @@ serve(async (req) => {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Get all outreach messages
+    // Get all outreach messages with lead/campaign info
     const { data: outreachMessages, error: outreachError } = await adminClient
       .from('outreach_messages')
-      .select('*');
+      .select('*, leads(name, email, user_id, company)')
+      .order('created_at', { ascending: false });
 
     // Get all contact submissions
     const { data: contactSubmissions, error: contactError } = await adminClient
@@ -300,6 +301,7 @@ serve(async (req) => {
         total: totalOutreachMessages,
         sent: sentMessages,
         draft: draftMessages,
+        items: outreachMessages?.slice(0, 50) || [],
       },
       charts: {
         dailySignups: Object.entries(dailySignups).map(([date, count]) => ({ date, count })),
