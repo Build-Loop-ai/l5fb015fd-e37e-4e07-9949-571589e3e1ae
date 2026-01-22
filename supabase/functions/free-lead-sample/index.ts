@@ -6,6 +6,148 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Filter to only keep actual LinkedIn profile URLs
+function isValidProfileUrl(url: string): boolean {
+  if (!url) return false;
+  const lowerUrl = url.toLowerCase();
+  // Must be a profile URL
+  if (!lowerUrl.includes('linkedin.com/in/')) return false;
+  // Exclude job pages, company pages, etc.
+  if (lowerUrl.includes('/jobs/') || lowerUrl.includes('/job/')) return false;
+  if (lowerUrl.includes('/company/')) return false;
+  if (lowerUrl.includes('/pulse/')) return false;
+  if (lowerUrl.includes('/posts/')) return false;
+  return true;
+}
+
+// Check if the result looks like a real person profile (not a search/error page)
+function isValidProfileContent(result: any): boolean {
+  const title = (result.title || '').toLowerCase();
+  const text = (result.text || '').toLowerCase();
+  
+  // Skip error/search pages
+  const invalidPatterns = [
+    "we couldn't find a match",
+    "couldn't find a match",
+    "jobs in",
+    "job opportunities",
+    "linkedin respects your privacy",
+    "sign in to view",
+    "this page doesn't exist",
+    "page not found",
+    "0 results",
+    "no results found",
+    "search results",
+    "job search"
+  ];
+  
+  for (const pattern of invalidPatterns) {
+    if (title.includes(pattern) || text.slice(0, 500).includes(pattern)) {
+      return false;
+    }
+  }
+  
+  // Must have some meaningful content
+  if (text.length < 50) return false;
+  
+  return true;
+}
+
+// Parse LinkedIn profile from Exa result
+function parseLinkedInResult(result: any): {
+  name: string;
+  title: string;
+  company: string;
+  location: string | null;
+  url: string;
+  email_available: boolean;
+  linkedin_available: boolean;
+  phone_available: boolean;
+} | null {
+  const url = result.url || '';
+  const titleStr = result.title || '';
+  const text = result.text || '';
+  
+  // Parse name from title (format: "Name - Title - Company | LinkedIn" or "Name | LinkedIn")
+  let name = 'Unknown';
+  let jobTitle = '';
+  let company = '';
+  
+  // Remove " | LinkedIn" suffix first
+  const cleanTitle = titleStr.replace(/\s*[|]\s*LinkedIn.*$/i, '').trim();
+  
+  // Split by " - " to get parts
+  const parts = cleanTitle.split(/\s*[-–]\s*/);
+  
+  if (parts.length >= 1) {
+    name = parts[0]?.trim() || 'Unknown';
+  }
+  
+  if (parts.length >= 2) {
+    // Second part could be "Title at Company" or just "Title" or "Company"
+    const secondPart = parts[1]?.trim() || '';
+    const atMatch = secondPart.match(/^(.+?)\s+(?:at|@)\s+(.+)$/i);
+    
+    if (atMatch) {
+      jobTitle = atMatch[1]?.trim() || '';
+      company = atMatch[2]?.trim() || '';
+    } else {
+      jobTitle = secondPart;
+    }
+  }
+  
+  if (parts.length >= 3 && !company) {
+    company = parts[2]?.trim() || '';
+  }
+  
+  // Skip if name looks like a search query, job listing, or error
+  const nameLower = name.toLowerCase();
+  if (nameLower.includes('job') || 
+      nameLower.includes('search') || 
+      nameLower.includes('result') ||
+      nameLower.includes("couldn't find") ||
+      name.length < 2 ||
+      name.length > 60) {
+    return null;
+  }
+  
+  // Try to extract location from text
+  let location: string | null = null;
+  const locationPatterns = [
+    /(?:based in|located in|from|📍)\s*([^|\n,]+(?:,\s*[^|\n]+)?)/i,
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?,\s*(?:[A-Z]{2}|[A-Z][a-z]+))\s*(?:\||·|area|$)/,
+    /(Netherlands|Amsterdam|Rotterdam|Germany|Berlin|Munich|France|Paris|United Kingdom|UK|London|USA|United States|New York|San Francisco|Canada|Toronto|Australia|Sydney|India|Bangalore)/i,
+  ];
+  
+  for (const pattern of locationPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && match[1].length < 50) {
+      location = match[1].trim();
+      break;
+    }
+  }
+  
+  // Check for contact info indicators
+  const hasEmail = /@[a-z0-9.-]+\.[a-z]{2,}/i.test(text) || 
+    /\bemail\b/i.test(text) ||
+    /contact/i.test(text);
+  
+  const hasPhone = /\+?[\d\s\-\(\)]{10,}/.test(text) ||
+    /\bphone\b/i.test(text) ||
+    /\bmobile\b/i.test(text);
+  
+  return {
+    name: name.substring(0, 60),
+    title: jobTitle || 'Professional',
+    company: company?.substring(0, 60) || 'Company',
+    location,
+    url,
+    email_available: hasEmail,
+    linkedin_available: true,
+    phone_available: hasPhone,
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -37,7 +179,7 @@ serve(async (req) => {
       });
     }
 
-    // Get IP for rate limiting (from headers)
+    // Get IP for rate limiting
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                req.headers.get('x-real-ip') || 
                'unknown';
@@ -51,7 +193,8 @@ serve(async (req) => {
 
     if (emailSubmissions && emailSubmissions.length >= 3) {
       return new Response(JSON.stringify({ 
-        error: 'You\'ve already used your free lead samples. Sign up to get unlimited leads!' 
+        error: 'You\'ve already used your free lead samples. Sign up to get unlimited leads!',
+        limit_reached: true
       }), {
         status: 429,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -69,7 +212,8 @@ serve(async (req) => {
 
     if (ipSubmissions && ipSubmissions.length >= 5) {
       return new Response(JSON.stringify({ 
-        error: 'Too many requests. Please try again later or sign up for full access.' 
+        error: 'Too many requests. Please try again later or sign up for full access.',
+        limit_reached: true
       }), {
         status: 429,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -78,7 +222,7 @@ serve(async (req) => {
 
     console.log('Searching for leads with query:', query);
 
-    // Call Exa API with LinkedIn-focused search for real leads
+    // Call Exa API with LinkedIn-focused search - request more results to filter
     const exaResponse = await fetch('https://api.exa.ai/search', {
       method: 'POST',
       headers: {
@@ -86,13 +230,14 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: `site:linkedin.com/in/ ${query}`,
+        query: `${query} professional LinkedIn profile`,
         type: 'neural',
-        numResults: 5,
+        useAutoprompt: true,
+        numResults: 25, // Request more to filter down to 5 good ones
         contents: {
-          text: { maxCharacters: 2000 },
-          highlights: true,
+          text: { maxCharacters: 1500 },
         },
+        includeDomains: ['linkedin.com'],
       }),
     });
 
@@ -103,80 +248,48 @@ serve(async (req) => {
     }
 
     const exaData = await exaResponse.json();
-    console.log('Exa response:', JSON.stringify(exaData).substring(0, 500));
+    const results = exaData.results || [];
+    
+    console.log(`Exa returned ${results.length} results, filtering...`);
 
-    // Parse LinkedIn results into structured lead data
-    const parseLinkedInResult = (result: any) => {
-      const titleParts = (result.title || '').split(' - ');
-      
-      // Name is first part, company is usually second-to-last (before "LinkedIn")
-      const name = titleParts[0]?.trim() || 'Professional';
-      const company = titleParts.length > 2 
-        ? titleParts[titleParts.length - 2]?.trim() 
-        : titleParts[1]?.trim() || null;
-      
-      const text = result.text || '';
-      const lines = text.split('\n').filter((l: string) => l.trim());
-      
-      // First meaningful line after name header is usually the headline/title
-      let headline = null;
-      for (const line of lines.slice(0, 5)) {
-        const trimmed = line.trim();
-        // Skip if it's just the name or very short
-        if (trimmed.length > 15 && !trimmed.toLowerCase().includes(name.toLowerCase().split(' ')[0])) {
-          headline = trimmed.substring(0, 120);
-          break;
-        }
+    // Filter and parse results - only keep valid profile pages
+    const validLeads: NonNullable<ReturnType<typeof parseLinkedInResult>>[] = [];
+    
+    for (const result of results) {
+      // Check URL is a profile
+      if (!isValidProfileUrl(result.url)) {
+        console.log('Skipping non-profile URL:', result.url);
+        continue;
       }
       
-      // Extract location from common LinkedIn patterns
-      const locationPatterns = [
-        /(?:based in|located in|from|📍)\s*([^|\n,]+(?:,\s*[^|\n]+)?)/i,
-        /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?,\s*(?:[A-Z]{2}|[A-Z][a-z]+))\s*(?:\||·|$)/,
-        /(Netherlands|Germany|France|United Kingdom|UK|USA|United States|Canada|Australia|India)/i,
-      ];
-      
-      let location = null;
-      for (const pattern of locationPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          location = match[1]?.trim().substring(0, 50);
-          break;
-        }
+      // Check content is valid
+      if (!isValidProfileContent(result)) {
+        console.log('Skipping invalid content:', result.title?.substring(0, 50));
+        continue;
       }
       
-      // Check for real contact info indicators in the text
-      const hasEmailIndicator = /@[a-z0-9.-]+\.[a-z]{2,}/i.test(text) || 
-        /\bemail\b.*available/i.test(text) ||
-        /contact.*email/i.test(text);
+      // Parse the result
+      const parsed = parseLinkedInResult(result);
+      if (parsed && parsed.name !== 'Unknown' && parsed.name.length >= 2) {
+        validLeads.push(parsed);
+        console.log('Valid lead found:', parsed.name);
+      }
       
-      const hasPhoneIndicator = /\+?[\d\s\-\(\)]{10,}/.test(text) ||
-        /\bphone\b.*available/i.test(text) ||
-        /\bcall\b/i.test(text);
+      // Stop once we have 5 good leads
+      if (validLeads.length >= 5) break;
+    }
 
-      return {
-        name: name.substring(0, 60),
-        title: headline || 'Professional',
-        company: company?.substring(0, 60) || 'Company',
-        location: location || null,
-        url: result.url,
-        isLinkedIn: result.url?.includes('linkedin.com'),
-        hasEmail: hasEmailIndicator,
-        hasPhone: hasPhoneIndicator,
-      };
-    };
-
-    const fullLeads = (exaData.results || []).map(parseLinkedInResult);
+    console.log(`Filtered to ${validLeads.length} valid leads`);
 
     // Create blurred version for response (hide sensitive data)
-    const blurredLeads = fullLeads.map((lead: any) => ({
+    const blurredLeads = validLeads.map((lead) => ({
       name: lead.name,
       title: lead.title,
       company: lead.company ? lead.company.substring(0, 3) + '***' : '***',
       location: lead.location,
-      email_available: lead.hasEmail,
-      linkedin_available: lead.isLinkedIn,
-      phone_available: lead.hasPhone,
+      email_available: lead.email_available,
+      linkedin_available: lead.linkedin_available,
+      phone_available: lead.phone_available,
     }));
 
     // Store submission with full data
@@ -186,7 +299,11 @@ serve(async (req) => {
         email: email.toLowerCase(),
         magnet_type: 'free_leads',
         input_data: { query },
-        output_data: { leads: fullLeads, count: fullLeads.length },
+        output_data: { 
+          leads: validLeads, 
+          count: validLeads.length,
+          raw_results_count: results.length 
+        },
         ip_address: ip,
       });
 
@@ -198,7 +315,9 @@ serve(async (req) => {
       success: true,
       leads: blurredLeads,
       total: blurredLeads.length,
-      message: 'Sign up to unlock full contact details and get 250+ leads per month!'
+      message: validLeads.length > 0 
+        ? 'Sign up to unlock full contact details and get 250+ leads per month!'
+        : 'No LinkedIn profiles found for that query. Try being more specific (e.g., "Marketing Director at SaaS companies in Amsterdam").',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
