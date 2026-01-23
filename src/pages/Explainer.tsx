@@ -1,5 +1,5 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useBrandConfig } from '@/hooks/useBrandConfig';
 import { cn } from '@/lib/utils';
@@ -433,6 +433,7 @@ export default function Explainer() {
   const { appName, isLoading } = useBrandConfig();
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
+  const [activeSection, setActiveSection] = useState('hero');
   
   const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -100]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
@@ -450,11 +451,40 @@ export default function Explainer() {
     { id: 'edge-functions', label: 'Edge Functions' },
   ];
 
+  // Track active section with Intersection Observer
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    
+    sections.forEach(({ id }) => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
+              setActiveSection(id);
+            }
+          });
+        },
+        { threshold: [0.3, 0.5, 0.7], rootMargin: '-20% 0px -20% 0px' }
+      );
+      
+      observer.observe(element);
+      observers.push(observer);
+    });
+    
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, []);
+
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const displayName = isLoading ? 'Platform' : appName;
+  const currentIndex = sections.findIndex(s => s.id === activeSection);
 
   return (
     <div ref={containerRef} className="min-h-screen bg-background relative overflow-x-hidden">
@@ -463,16 +493,48 @@ export default function Explainer() {
       <FloatingOrb className="w-[500px] h-[500px] bg-primary/20 top-[60vh] -right-32" delay={2} />
       <FloatingOrb className="w-[400px] h-[400px] bg-primary/25 top-[150vh] left-1/4" delay={4} />
       
-      {/* Fixed Navigation Dots */}
+      {/* Mobile Slide Indicator - Top Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 lg:hidden">
+        <div className="glass border-b border-white/10 px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-muted-foreground">
+              {currentIndex + 1} / {sections.length}
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              {sections[currentIndex]?.label}
+            </span>
+          </div>
+          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+            <motion.div 
+              className="h-full bg-primary rounded-full"
+              initial={false}
+              animate={{ width: `${((currentIndex + 1) / sections.length) * 100}%` }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Desktop Navigation Dots */}
       <nav className="fixed right-8 top-1/2 -translate-y-1/2 z-50 hidden lg:flex flex-col gap-4">
-        {sections.map((section) => (
-          <NavDot
-            key={section.id}
-            active={false}
-            label={section.label}
-            onClick={() => scrollToSection(section.id)}
-          />
-        ))}
+        <div className="glass rounded-2xl p-3 border border-white/10 backdrop-blur-xl">
+          <div className="flex flex-col gap-3">
+            {sections.map((section, index) => (
+              <NavDot
+                key={section.id}
+                active={activeSection === section.id}
+                label={section.label}
+                onClick={() => scrollToSection(section.id)}
+              />
+            ))}
+          </div>
+          {/* Current slide indicator */}
+          <div className="mt-4 pt-3 border-t border-white/10 text-center">
+            <span className="text-xs font-mono text-primary">
+              {currentIndex + 1}/{sections.length}
+            </span>
+          </div>
+        </div>
       </nav>
 
       {/* Back Button */}
