@@ -451,32 +451,50 @@ export default function Explainer() {
     { id: 'edge-functions', label: 'Edge Functions' },
   ];
 
-  // Track active section with Intersection Observer
+  // Track active section based on scroll position
   useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    
-    sections.forEach(({ id }) => {
-      const element = document.getElementById(id);
-      if (!element) return;
+    const handleScroll = () => {
+      const viewportCenter = window.innerHeight / 2;
+      let closestSection = sections[0].id;
+      let closestDistance = Infinity;
       
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
-              setActiveSection(id);
-            }
-          });
-        },
-        { threshold: [0.3, 0.5, 0.7], rootMargin: '-20% 0px -20% 0px' }
-      );
+      sections.forEach(({ id }) => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        
+        const rect = element.getBoundingClientRect();
+        const elementCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(elementCenter - viewportCenter);
+        
+        // Check if section is at least partially visible
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        
+        if (isVisible && distance < closestDistance) {
+          closestDistance = distance;
+          closestSection = id;
+        }
+      });
       
-      observer.observe(element);
-      observers.push(observer);
-    });
-    
-    return () => {
-      observers.forEach((observer) => observer.disconnect());
+      setActiveSection(closestSection);
     };
+    
+    // Initial check
+    handleScroll();
+    
+    // Throttled scroll handler
+    let ticking = false;
+    const scrollHandler = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+    return () => window.removeEventListener('scroll', scrollHandler);
   }, []);
 
   const scrollToSection = (id: string) => {
