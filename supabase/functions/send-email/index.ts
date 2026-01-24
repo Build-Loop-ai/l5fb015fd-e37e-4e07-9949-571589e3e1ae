@@ -41,7 +41,46 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
   }
 }
 
+function wrapInHtmlTemplate(content: string): string {
+  // Convert plain text to HTML if needed (handles legacy plain text content)
+  let htmlContent = content;
+  
+  // If content doesn't have HTML tags, convert plain text to HTML
+  if (!/<[a-z][\s\S]*>/i.test(content)) {
+    // Convert double line breaks to paragraph breaks
+    const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+    htmlContent = paragraphs.map(p => `<p style="margin: 0 0 16px 0;">${p.replace(/\n/g, '<br>')}</p>`).join('');
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title></title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="padding: 40px 48px; font-size: 16px; line-height: 1.6; color: #18181b;">
+              ${htmlContent}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 function createRawEmail(to: string, from: string, subject: string, body: string): string {
+  const htmlBody = wrapInHtmlTemplate(body);
+  
   const emailLines = [
     `To: ${to}`,
     `From: ${from}`,
@@ -49,7 +88,7 @@ function createRawEmail(to: string, from: string, subject: string, body: string)
     `MIME-Version: 1.0`,
     `Content-Type: text/html; charset=utf-8`,
     ``,
-    body,
+    htmlBody,
   ];
 
   const email = emailLines.join("\r\n");

@@ -148,7 +148,7 @@ Write outreach that:
 
 Return JSON with:
 - subject: Compelling, curiosity-driven subject line (max 50 chars, reference something specific about them)
-- body: Email body - short paragraphs, specific personalization from their background, clear value
+- body: Email body in clean HTML format. Use <p> tags for paragraphs (2-3 short sentences max per paragraph). Do NOT use <br> between paragraphs. Keep it conversational and punchy. Example: <p>First paragraph here.</p><p>Second paragraph here.</p>
 - linkedin_message: Shorter LinkedIn version (max 280 chars) - direct, personal, reference one specific thing from their profile`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
