@@ -27,7 +27,8 @@ import {
   Settings,
   Lock,
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  AlertTriangle
 } from 'lucide-react';
 
 // ============================================
@@ -440,6 +441,7 @@ export default function Explainer() {
 
   const sections = [
     { id: 'hero', label: 'Overview' },
+    { id: 'market-problem', label: 'The Market' },
     { id: 'tech-stack', label: 'Tech Stack' },
     { id: 'database', label: 'Database' },
     { id: 'lead-flow', label: 'Lead Discovery' },
@@ -624,7 +626,188 @@ export default function Explainer() {
       </motion.section>
 
       {/* ========================================== */}
-      {/* SECTION 2: TECH STACK */}
+      {/* SECTION 2: MARKET PROBLEM 2026 */}
+      {/* ========================================== */}
+      <AnimatedSection id="market-problem" className="py-32 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary mb-4 block">
+              The Market in 2026
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+              Cold Outreach is Harder Than Ever
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              The landscape has shifted. What worked in 2020 no longer works today.
+            </p>
+          </div>
+          
+          {/* Problem Cards */}
+          <div className="grid md:grid-cols-2 gap-4 mb-16">
+            {[
+              { problem: 'Email deliverability stricter', impact: 'Gmail/Outlook filters have become more aggressive', icon: <Mail className="w-4 h-4" /> },
+              { problem: 'Inboxes flooded with AI-generated spam', impact: 'Response rates are plummeting', icon: <AlertTriangle className="w-4 h-4" /> },
+              { problem: 'Privacy regulations (GDPR, etc.)', impact: 'More restrictions on data usage', icon: <Shield className="w-4 h-4" /> },
+              { problem: 'Buyers are fatigued', impact: '"Hey {first_name}" no longer works', icon: <Users className="w-4 h-4" /> },
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="glass rounded-xl p-5 border border-red-500/20 bg-red-500/5 hover:border-red-500/40 transition-all duration-300"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400">
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-1">{item.problem}</h4>
+                    <p className="text-xs text-muted-foreground">{item.impact}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+          
+          {/* Callout */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="glass rounded-2xl p-8 border border-primary/30 bg-primary/5 text-center mb-20"
+          >
+            <p className="text-lg md:text-xl text-foreground font-medium">
+              But: companies still need to sell. The demand for leads isn't disappearing — 
+              <span className="gradient-text font-bold"> the bar for quality is going up.</span>
+            </p>
+          </motion.div>
+          
+          {/* The Shift: Volume → Precision */}
+          <div className="text-center mb-12">
+            <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary mb-4 block">
+              Where {displayName} Comes In
+            </span>
+            <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              The Shift: Volume → Precision
+            </h3>
+          </div>
+          
+          {/* Comparison Table */}
+          <div className="grid md:grid-cols-2 gap-8 mb-20">
+            {/* Old Way */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className="glass rounded-2xl p-6 border border-white/10"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                </div>
+                <h4 className="text-xl font-semibold text-foreground">The Old Way</h4>
+              </div>
+              <div className="space-y-3">
+                {[
+                  '10,000 emails, 0.5% response',
+                  'Generic templates',
+                  'Buying lead lists',
+                  'Spray and pray',
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-400/60" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+            
+            {/* New Way */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className="glass rounded-2xl p-6 border border-primary/30 bg-primary/5"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-primary" />
+                </div>
+                <h4 className="text-xl font-semibold text-foreground">The New Way</h4>
+              </div>
+              <div className="space-y-3">
+                {[
+                  '500 hyper-targeted emails, 5% response',
+                  'AI-personalized per prospect',
+                  'AI-discovery based on criteria',
+                  'Research-based outreach',
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm text-foreground">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+          
+          {/* Positioning Statement */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-center mb-20"
+          >
+            <div className="inline-block glass rounded-2xl px-8 py-6 border border-primary/40 shadow-lg shadow-primary/10">
+              <p className="text-xl md:text-2xl font-bold gradient-text">
+                Fewer leads. Better leads. Higher conversion.
+              </p>
+            </div>
+          </motion.div>
+          
+          {/* Market Stats */}
+          <div className="text-center mb-12">
+            <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary mb-4 block">
+              Market Statistics
+            </span>
+            <h3 className="text-2xl font-semibold text-foreground">
+              The Numbers Speak for Themselves
+            </h3>
+          </div>
+          
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {[
+              { value: '$9.5B+', label: 'Global lead gen market 2026', source: 'Industry Reports' },
+              { value: '78%', label: 'Sales teams prioritize quality > quantity', source: 'HubSpot/Gartner' },
+              { value: '1-3%', label: 'Avg cold email response (was 5-8% in 2020)', source: 'Mailshake/Lemlist' },
+              { value: '63%', label: 'Companies say lead gen is #1 challenge', source: 'Demand Gen Report' },
+              { value: '21%', label: 'Sales rep time spent on research', source: 'Salesforce' },
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.08 }}
+                viewport={{ once: true }}
+                className="glass rounded-xl p-5 border border-white/10 text-center hover:border-primary/30 transition-all duration-300"
+              >
+                <div className="text-2xl md:text-3xl font-bold gradient-text mb-2">{stat.value}</div>
+                <p className="text-xs text-muted-foreground mb-2">{stat.label}</p>
+                <span className="text-[10px] text-primary/60 font-mono">{stat.source}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </AnimatedSection>
+
+      {/* ========================================== */}
+      {/* SECTION 3: TECH STACK */}
       {/* ========================================== */}
       <AnimatedSection id="tech-stack" className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
