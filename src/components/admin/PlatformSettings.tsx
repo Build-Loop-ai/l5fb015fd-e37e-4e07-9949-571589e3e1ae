@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Settings, Mail, CreditCard, Building2, AlertCircle } from 'lucide-react';
+import { Loader2, Save, Settings, Mail, CreditCard, Building2, AlertCircle, Sparkles } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DEFAULT_PLATFORM_SETTINGS } from './platformSettingsDefaults';
 
 interface PlatformSetting {
   id: string;
@@ -22,6 +23,7 @@ interface PlatformSetting {
 export function PlatformSettings() {
   const [settings, setSettings] = useState<PlatformSetting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
   const { toast } = useToast();
@@ -40,7 +42,6 @@ export function PlatformSettings() {
       if (error) throw error;
       setSettings(data || []);
       
-      // Initialize edited values
       const initial: Record<string, string> = {};
       data?.forEach(s => { initial[s.key] = s.value; });
       setEditedValues(initial);
@@ -56,6 +57,43 @@ export function PlatformSettings() {
     }
   };
 
+  const seedDefaults = async () => {
+    setSeeding(true);
+    try {
+      const { error } = await supabase
+        .from('platform_settings')
+        .upsert(
+          DEFAULT_PLATFORM_SETTINGS.map(s => ({
+            key: s.key,
+            value: s.value,
+            category: s.category,
+            label: s.label,
+            description: s.description,
+            is_secret: s.is_secret,
+          })),
+          { onConflict: 'key' }
+        );
+
+      if (error) throw error;
+
+      toast({
+        title: 'Settings initialized!',
+        description: 'Default settings have been created. You can now customize them.',
+      });
+
+      await fetchSettings();
+    } catch (error) {
+      console.error('Error seeding settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to initialize settings. Make sure you have admin access.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const handleSave = async (key: string) => {
     setSaving(key);
     try {
@@ -66,7 +104,6 @@ export function PlatformSettings() {
 
       if (error) throw error;
 
-      // Update local state
       setSettings(prev => 
         prev.map(s => s.key === key ? { ...s, value: editedValues[key] } : s)
       );
@@ -122,6 +159,48 @@ export function PlatformSettings() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Empty state — settings table has no rows
+  if (settings.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Platform Settings</h2>
+          <p className="text-muted-foreground mt-1">
+            Configure your app for production.
+          </p>
+        </div>
+
+        <Card className="bg-card/50 border-border/50">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-7 h-7 text-primary" />
+            </div>
+            <div className="space-y-2 max-w-md">
+              <h3 className="text-lg font-semibold">Welcome to your new instance!</h3>
+              <p className="text-sm text-muted-foreground">
+                It looks like this is a fresh setup. Click below to initialize all default settings — 
+                you can customize everything (app name, Stripe IDs, email config, etc.) right after.
+              </p>
+            </div>
+            <Button
+              onClick={seedDefaults}
+              disabled={seeding}
+              size="lg"
+              className="gap-2 mt-2"
+            >
+              {seeding ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Initialize Settings
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
