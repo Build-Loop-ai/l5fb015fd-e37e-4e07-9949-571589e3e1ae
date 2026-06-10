@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { authenticate, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,8 +12,15 @@ serve(async (req) => {
   }
 
   try {
+    // Calls a paid scraping API — require an authenticated caller so anonymous
+    // users can't burn the operator's Apify balance.
+    const auth = await authenticate(req);
+    if (!auth.ok) {
+      return unauthorizedResponse(auth, corsHeaders);
+    }
+
     const { linkedinUrl } = await req.json();
-    
+
     const APIFY_API_KEY = Deno.env.get('APIFY_API_KEY');
     if (!APIFY_API_KEY) {
       throw new Error('APIFY_API_KEY is not configured');

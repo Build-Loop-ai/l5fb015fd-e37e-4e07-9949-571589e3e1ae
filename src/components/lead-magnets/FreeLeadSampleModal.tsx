@@ -113,8 +113,10 @@ export function FreeLeadSampleModal({ open, onOpenChange }: FreeLeadSampleModalP
             }
           }
         }
-      } catch {}
-      
+      } catch {
+        // ignore — fall through to the generic error below
+      }
+
       setError(errorMessage);
       setStep('email');
       toast({

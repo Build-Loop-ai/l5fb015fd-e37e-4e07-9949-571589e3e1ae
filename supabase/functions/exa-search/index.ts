@@ -17,19 +17,23 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Get authenticated user
+    // Require an authenticated user — Exa is a paid API and the credit check
+    // below only runs when we know who the caller is. Without this, anonymous
+    // callers would burn the operator's Exa quota for free.
     const authHeader = req.headers.get('Authorization');
-    let userId: string | null = null;
-    
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError) {
-        console.error('Auth error:', authError);
-      } else {
-        userId = user?.id || null;
-      }
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization required' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userId = user.id;
 
     const { query, campaignId } = await req.json();
 
@@ -43,12 +47,12 @@ Deno.serve(async (req) => {
     }
 
     // Check credit limit before starting search
-    if (userId) {
+    {
       const { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .select('credits_limit, credits_used')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (subError) {
         console.error('Error fetching subscription:', subError);
@@ -63,9 +67,9 @@ Deno.serve(async (req) => {
             message: 'You have used all your credits. Please upgrade your plan.',
             credits_used: subscription.credits_used,
             credits_limit: subscription.credits_limit,
-          }), { 
-            status: 402, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }), {
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
       }

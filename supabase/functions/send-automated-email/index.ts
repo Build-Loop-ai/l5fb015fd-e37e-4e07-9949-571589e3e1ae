@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticate, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +36,20 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Missing event_type or user_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // This sends through the operator's Resend account. Internal callers use the
+    // service role; a user may only trigger emails for their own account. Without
+    // this, anyone could spam any user and enumerate valid user_ids.
+    const auth = await authenticate(req);
+    if (!auth.ok) {
+      return unauthorizedResponse(auth, corsHeaders);
+    }
+    if (!auth.isServiceRole && auth.userId !== user_id) {
+      return new Response(
+        JSON.stringify({ error: 'Cannot send automated email for another user' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Extract name from LinkedIn URL slug as fallback
 function extractNameFromLinkedInUrl(url: string): string {
-  const urlMatch = url.match(/linkedin\.com\/in\/([^\/\?]+)/);
+  const urlMatch = url.match(/linkedin\.com\/in\/([^/?]+)/);
   if (urlMatch) {
     let slug = urlMatch[1];
     // Remove trailing hash (e.g., "john-doe-a1b2c3")
@@ -144,7 +144,7 @@ function parseLeadFromResult(result: any): {
     /\bemail\b/i.test(text) ||
     /contact/i.test(text);
   
-  const hasPhone = /\+?[\d\s\-\(\)]{10,}/.test(text) ||
+  const hasPhone = /\+?[\d\s\-()]{10,}/.test(text) ||
     /\bphone\b/i.test(text) ||
     /\bmobile\b/i.test(text);
   

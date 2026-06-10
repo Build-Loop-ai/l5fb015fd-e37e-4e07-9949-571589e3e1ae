@@ -7,6 +7,32 @@ const corsHeaders = {
 
 const EXA_WEBSETS_BASE = 'https://api.exa.ai/websets/v0';
 
+/** Constant-time-ish HMAC-SHA256 verification of a raw request body. */
+async function verifyHmac(body: string, signature: string, secret: string): Promise<boolean> {
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    );
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+    const expected = Array.from(new Uint8Array(sig))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    // Accept either the bare hex or a "sha256=" prefixed form
+    const received = signature.replace(/^sha256=/, '').trim().toLowerCase();
+    if (received.length !== expected.length) return false;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ received.charCodeAt(i);
+    return diff === 0;
+  } catch (err) {
+    console.error('HMAC verification error:', err);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,8 +44,30 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const payload = await req.json();
-    
+    // Read the raw body once so we can both verify the signature and parse it.
+    const rawBody = await req.text();
+
+    // Verify the webhook came from Exa. Exa signs the raw body with HMAC-SHA256
+    // using your webhook signing secret and sends it in x-exa-signature. Set
+    // EXA_WEBHOOK_SECRET to enable verification; without it, forged payloads
+    // could inject fake leads and credit grants.
+    const webhookSecret = Deno.env.get('EXA_WEBHOOK_SECRET');
+    if (webhookSecret) {
+      const signature = req.headers.get('x-exa-signature') || '';
+      const valid = await verifyHmac(rawBody, signature, webhookSecret);
+      if (!valid) {
+        console.error('Exa webhook rejected: invalid signature');
+        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      console.warn('EXA_WEBHOOK_SECRET is not configured — webhook requests are NOT authenticated.');
+    }
+
+    const payload = JSON.parse(rawBody);
+
     console.log('Webhook received:', JSON.stringify(payload, null, 2));
 
     const eventType = payload.type;
@@ -380,7 +428,7 @@ function parseLeadFromItem(item: any): any {
 
   // Fallback: extract name from LinkedIn URL slug
   if (!name && linkedinUrl) {
-    const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+    const urlMatch = linkedinUrl.match(/linkedin\.com\/in\/([^/?]+)/);
     if (urlMatch) {
       let slug = urlMatch[1];
       slug = slug.replace(/-[a-f0-9]{6,}$/i, '');

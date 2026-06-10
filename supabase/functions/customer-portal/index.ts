@@ -49,7 +49,9 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
+    // Prefer a configured APP_URL so a spoofed Origin can't redirect the user
+    // to an attacker's site after they leave the Stripe portal.
+    const origin = Deno.env.get("APP_URL") || req.headers.get("origin") || "http://localhost:3000";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/`,

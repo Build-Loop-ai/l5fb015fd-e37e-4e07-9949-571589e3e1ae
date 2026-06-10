@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       .from('email_log')
       .select('opened_at, clicked_at')
       .eq('id', emailLogId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching email log:', error);
@@ -80,15 +80,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    // For click tracking, redirect to the original URL
+    // For click tracking, redirect to the original URL — but only to http(s)
+    // targets, never javascript:/data: schemes that could be used for phishing.
     if (trackType === 'click' && redirectUrl) {
-      return new Response(null, {
-        status: 302,
-        headers: { 
-          'Location': decodeURIComponent(redirectUrl),
-          ...corsHeaders 
-        },
-      });
+      const target = decodeURIComponent(redirectUrl);
+      let safe = false;
+      try {
+        const parsed = new URL(target);
+        safe = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+      } catch {
+        safe = false;
+      }
+      if (safe) {
+        return new Response(null, {
+          status: 302,
+          headers: { 'Location': target, ...corsHeaders },
+        });
+      }
     }
 
     // For open tracking, return transparent pixel

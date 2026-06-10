@@ -25,6 +25,11 @@ In Lovable Cloud → **Secrets**, add these keys:
 | `APIFY_API_KEY` | ✅ | [Apify Console](https://console.apify.com/account/integrations) |
 | `GOOGLE_CLIENT_ID` | Optional | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
 | `GOOGLE_CLIENT_SECRET` | Optional | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `EXA_WEBHOOK_SECRET` | Recommended | Your Exa webhook signing secret — verifies incoming Exa webhooks |
+| `APP_URL` | Recommended | Your production URL (e.g. `https://app.yourdomain.com`) — used for Stripe redirect URLs so a spoofed Origin can't redirect users elsewhere |
+
+> **Admin access:** there is no hardcoded admin. After you sign up, grant your own
+> account the admin role once: `INSERT INTO user_roles (user_id, role) VALUES ('<your-auth-user-id>', 'admin');`
 
 ### 4. Create Stripe Products
 Create your subscription products in Stripe, then update the price IDs in Admin → Platform Settings.

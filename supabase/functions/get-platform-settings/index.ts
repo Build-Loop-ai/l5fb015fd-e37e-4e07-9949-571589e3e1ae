@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch all non-secret settings
+    // eslint-disable-next-line prefer-const -- settingsRows is reassigned after a conditional refetch below
     let { data: settingsRows, error } = await supabase
       .from('platform_settings')
       .select('key, value')

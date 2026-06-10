@@ -48,6 +48,11 @@ serve(async (req) => {
       logStep("Found existing customer", { customerId });
     }
 
+    // Prefer a configured APP_URL so a spoofed Origin header can't redirect the
+    // user to an attacker's site after checkout. Falls back to the request
+    // origin for local/preview use when APP_URL isn't set.
+    const baseUrl = Deno.env.get("APP_URL") || req.headers.get("origin") || "";
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -58,8 +63,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/dashboard?checkout=success`,
-      cancel_url: `${req.headers.get("origin")}/dashboard?checkout=canceled`,
+      success_url: `${baseUrl}/dashboard?checkout=success`,
+      cancel_url: `${baseUrl}/dashboard?checkout=canceled`,
       metadata: {
         user_id: user.id,
       },

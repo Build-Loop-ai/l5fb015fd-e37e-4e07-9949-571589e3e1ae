@@ -287,7 +287,7 @@ export async function enrichLeadWithLinkedIn(
     .from('leads')
     .select('profile_data')
     .eq('id', leadId)
-    .single();
+    .maybeSingle();
 
   // Merge LinkedIn data into profile_data
   const existingProfileData = (currentLead?.profile_data && typeof currentLead.profile_data === 'object') 
@@ -309,7 +309,7 @@ export async function enrichLeadWithLinkedIn(
     .from('leads')
     .select('email, phone, title, company, industry, location')
     .eq('id', leadId)
-    .single();
+    .maybeSingle();
 
   if (!leadData?.email && profile.email) {
     updates.email = profile.email;

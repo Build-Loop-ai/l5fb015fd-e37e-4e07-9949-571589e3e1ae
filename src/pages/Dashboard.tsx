@@ -92,11 +92,6 @@ export default function Index() {
     }
   }, [user, authLoading, navigate]);
 
-  // If this is the OAuth popup, render the callback handler
-  if (isOAuthPopup) {
-    return <OAuthCallback />;
-  }
-
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -265,6 +260,12 @@ export default function Index() {
   };
 
   const replyRate = stats.contacted > 0 ? Math.round((stats.replied / stats.contacted) * 100) : 0;
+
+  // If this is the OAuth popup, render the callback handler. This check lives
+  // after all hooks so hook order stays stable across renders.
+  if (isOAuthPopup) {
+    return <OAuthCallback />;
+  }
 
   // Show loading while checking auth
   if (authLoading || isLoading) {
