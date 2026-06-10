@@ -84,12 +84,20 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
       return;
     }
 
+    if (!lead.email) {
+      toast({
+        title: 'No email address',
+        description: "This lead doesn't have an email address yet. Enrich the lead first.",
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSending(true);
     try {
-      // TEST: Send to luukalleman@gmail.com instead of actual lead email
       const result = await sendEmail({
         leadId: lead.id,
-        to: 'luukalleman@gmail.com', // TEST OVERRIDE - change to lead.email for production
+        to: lead.email,
         subject: editedSubject,
         body: editedBody,
         campaignId: lead.campaign_id,
@@ -99,7 +107,7 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
         setShowOutreachDialog(false);
         toast({
           title: 'Email sent!',
-          description: `Successfully sent to luukalleman@gmail.com (test mode)`,
+          description: `Successfully sent to ${lead.email}`,
         });
       }
     } catch (error) {
@@ -254,11 +262,13 @@ export function LeadResultCard({ lead, isSelected, onToggleSelect, campaignGoal 
                 </div>
               )}
 
-              {/* Test mode notice */}
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
-                <Send className="w-5 h-5 flex-shrink-0" />
-                <p className="text-sm">Test mode: Emails will be sent to <strong>luukalleman@gmail.com</strong></p>
-              </div>
+              {/* Recipient notice */}
+              {lead.email && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
+                  <Send className="w-5 h-5 flex-shrink-0" />
+                  <p className="text-sm">This email will be sent to <strong>{lead.email}</strong></p>
+                </div>
+              )}
 
               {/* Email Subject */}
               <div>

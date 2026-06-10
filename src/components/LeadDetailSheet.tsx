@@ -668,11 +668,13 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Test mode notice */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
-                <Send className="w-4 h-4 flex-shrink-0" />
-                <p className="text-xs">Test mode: Sending to <strong>luukalleman@gmail.com</strong></p>
-              </div>
+              {/* Recipient notice */}
+              {lead.email && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
+                  <Send className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-xs">This email will be sent to <strong>{lead.email}</strong></p>
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Subject</label>
@@ -700,18 +702,21 @@ export function LeadDetailSheet({ lead, open, onClose, onLeadUpdated }: LeadDeta
                 className="w-full gap-2 rounded-xl h-11"
                 disabled={isSendingEmail}
                 onClick={async () => {
+                  if (!lead.email) {
+                    toast.error("This lead doesn't have an email address yet. Enrich the lead first.");
+                    return;
+                  }
                   setIsSendingEmail(true);
                   try {
-                    // TEST: Send to luukalleman@gmail.com
                     const result = await sendEmail({
                       leadId: lead.id,
-                      to: 'luukalleman@gmail.com', // TEST OVERRIDE
+                      to: lead.email,
                       subject: editedSubject,
                       body: editedBody,
                     });
 
                     if (result.success) {
-                      toast.success('Email sent to luukalleman@gmail.com (test mode)');
+                      toast.success(`Email sent to ${lead.email}`);
                       setShowOutreachDialog(false);
                       onLeadUpdated?.();
                     }

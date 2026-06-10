@@ -11,6 +11,7 @@ interface LeadFinderProps {
   onLeadsFound?: (leads: Lead[]) => void;
   campaignId?: string;
   campaignName?: string;
+  onUpgrade?: () => void;
 }
 
 const suggestions = [
@@ -19,7 +20,7 @@ const suggestions = [
   'Sales VPs at B2B SaaS with 50-200 employees',
 ];
 
-export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinderProps) {
+export function LeadFinder({ onLeadsFound, campaignId, campaignName, onUpgrade }: LeadFinderProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [foundLeads, setFoundLeads] = useState<Lead[]>([]);
@@ -239,9 +240,9 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
             </p>
           )}
 
-          <Button 
-            onClick={handleSearch} 
-            disabled={isSearching || !hasCredits}
+          <Button
+            onClick={!hasCredits && onUpgrade ? onUpgrade : handleSearch}
+            disabled={isSearching || (!hasCredits && !onUpgrade)}
             className="w-full mt-6 h-16 text-base font-semibold rounded-2xl"
             size="lg"
           >
@@ -251,7 +252,7 @@ export function LeadFinder({ onLeadsFound, campaignId, campaignName }: LeadFinde
                 Searching with AI...
               </span>
             ) : !hasCredits ? (
-              'No Credits - Upgrade Plan'
+              'Out of credits — Upgrade your plan →'
             ) : (
               'Find Leads →'
             )}

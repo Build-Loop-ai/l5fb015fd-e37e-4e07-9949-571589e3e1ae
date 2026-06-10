@@ -495,14 +495,15 @@ export default function Index() {
                     <p className="font-semibold text-foreground">{findMoreCampaign.name}</p>
                   </div>
                 </div>
-                <LeadFinder 
+                <LeadFinder
                   onLeadsFound={handleLeadsFound}
                   campaignId={findMoreCampaign.id}
                   campaignName={findMoreCampaign.name}
+                  onUpgrade={() => setActiveTab('settings')}
                 />
               </>
             ) : (
-              <LeadFinder onLeadsFound={handleLeadsFound} />
+              <LeadFinder onLeadsFound={handleLeadsFound} onUpgrade={() => setActiveTab('settings')} />
             )}
           </div>
         )}
