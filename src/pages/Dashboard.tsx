@@ -292,6 +292,9 @@ export default function Index() {
         {activeTab === 'dashboard' && (
           <div className="animate-fade-in">
             <div className="page-header">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/70 mb-2">
+                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              </p>
               <h1 className="page-title">Dashboard</h1>
               <p className="page-subtitle">Track your outreach performance and lead pipeline</p>
             </div>
