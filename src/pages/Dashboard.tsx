@@ -10,6 +10,7 @@ import { LeadDetailSheet } from '@/components/LeadDetailSheet';
 import { CreateCampaignDialog } from '@/components/CreateCampaignDialog';
 import { SettingsPage } from '@/components/SettingsPage';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
+import { LaunchChecklist } from '@/components/LaunchChecklist';
 import { Button } from '@/components/ui/button';
 import { RingLoader, AbstractBlob, TargetRings, SparkBurst, DataFlow } from '@/components/ui/visual-elements';
 import { SEO } from '@/components/SEO';
@@ -289,6 +290,18 @@ export default function Index() {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       
       <main className="ml-72 p-10">
+        {activeTab === 'launch' && (
+          <div className="animate-fade-in">
+            <div className="page-header">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/70 mb-2">Activation</p>
+              <h1 className="page-title">Go Live</h1>
+              <p className="page-subtitle">Everything between your remix and finding your first leads — checked for you.</p>
+            </div>
+            <div className="max-w-3xl">
+              <LaunchChecklist onConnectEmail={() => setActiveTab('settings')} />
+            </div>
+          </div>
+        )}
         {activeTab === 'dashboard' && (
           <div className="animate-fade-in">
             <div className="page-header">

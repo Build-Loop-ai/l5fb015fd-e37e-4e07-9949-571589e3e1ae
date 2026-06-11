@@ -13,6 +13,7 @@ interface SidebarProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', visual: 'bars' },
+  { id: 'launch', label: 'Go Live', visual: 'rocket' },
   { id: 'leads', label: 'Leads', visual: 'dots' },
   { id: 'finder', label: 'Lead Finder', visual: 'pulse' },
   { id: 'campaigns', label: 'Campaigns', visual: 'arrow' },
@@ -51,6 +52,15 @@ function NavVisual({ type, active }: { type: string; active: boolean }) {
         <div className="w-5 h-5 relative">
           <div className={cn('absolute top-1/2 left-0 w-3 h-0.5 rounded-full -translate-y-1/2 transition-all', active ? 'bg-primary' : 'bg-muted-foreground/60')} />
           <div className={cn('absolute top-1/2 right-0.5 w-2 h-2 border-r-2 border-t-2 rotate-45 -translate-y-1/2 transition-all', active ? 'border-primary' : 'border-muted-foreground/60')} />
+        </div>
+      );
+    case 'rocket':
+      return (
+        <div className="w-5 h-5 relative flex items-center justify-center">
+          <div className={cn(
+            'w-0 h-0 border-l-[5px] border-r-[5px] border-b-[9px] border-l-transparent border-r-transparent transition-all',
+            active ? 'border-b-primary' : 'border-b-muted-foreground/60',
+          )} />
         </div>
       );
     case 'gear':
